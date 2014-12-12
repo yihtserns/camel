@@ -120,7 +120,7 @@ public class JettyHttpProducer extends DefaultProducer implements AsyncProcessor
         HttpMethods methodToUse = HttpHelper.createMethod(exchange, getEndpoint(), exchange.getIn().getBody() != null);
         String method = methodToUse.createMethod(url).getName();
 
-        JettyContentExchange httpExchange = new JettyContentExchange(exchange, getBinding(), client);
+        JettyContentExchange httpExchange = new JettyContentExchange9(exchange, getBinding(), client);
         httpExchange.setURL(url); // Url has to be set first
         httpExchange.setMethod(method);
         
