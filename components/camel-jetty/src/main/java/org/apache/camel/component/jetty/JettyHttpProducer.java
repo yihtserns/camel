@@ -121,8 +121,19 @@ public class JettyHttpProducer extends DefaultProducer implements AsyncProcessor
         String method = methodToUse.createMethod(url).getName();
 
         JettyContentExchange httpExchange = new JettyContentExchange(exchange, getBinding(), client);
+        httpExchange.setURL(url); // Url has to be set first
         httpExchange.setMethod(method);
-        httpExchange.setURL(url);
+        
+        if (getEndpoint().getHttpClientParameters() != null) {
+            String timeout = (String)getEndpoint().getHttpClientParameters().get("timeout");
+            if (timeout != null) {
+                httpExchange.setTimeout(new Long(timeout));
+            }
+            String supportRedirect = (String)getEndpoint().getHttpClientParameters().get("supportRedirect");
+            if (supportRedirect != null) {
+                httpExchange.setSupportRedirect(new Boolean(supportRedirect));
+            }
+        }
 
         LOG.trace("Using URL: {} with method: {}", url, method);
 

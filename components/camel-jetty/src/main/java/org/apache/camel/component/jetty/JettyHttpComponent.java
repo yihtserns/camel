@@ -24,7 +24,6 @@ import java.lang.reflect.Method;
 import java.net.URI;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -63,11 +62,16 @@ import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.http.HttpStatus;
 import org.eclipse.jetty.jmx.MBeanContainer;
 import org.eclipse.jetty.server.AbstractConnector;
+import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.HttpConfiguration;
+import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
 import org.eclipse.jetty.server.handler.ErrorHandler;
 import org.eclipse.jetty.server.handler.HandlerCollection;
@@ -104,7 +108,7 @@ public class JettyHttpComponent extends HttpComponent implements RestConsumerFac
     protected String sslKeyPassword;
     protected String sslPassword;
     protected String sslKeystore;
-    protected Map<Integer, Connector> sslSocketConnectors;
+    protected Map<Integer, SslContextFactory> sslSocketConnectors;
     protected Map<Integer, Connector> socketConnectors;
     protected Map<String, Object> sslSocketConnectorProperties;
     protected Map<String, Object> socketConnectorProperties;
@@ -521,7 +525,14 @@ public class JettyHttpComponent extends HttpComponent implements RestConsumerFac
     protected Connector getSslSocketConnector(Server server, JettyHttpEndpoint endpoint) {
         Connector answer = null;
         if (sslSocketConnectors != null) {
-            answer = sslSocketConnectors.get(endpoint.getPort());
+            SslContextFactory con = sslSocketConnectors.get(endpoint.getPort());
+            if (con != null) {
+                    SslConnectionFactory sslConnectionFactory = new SslConnectionFactory(con, null);
+                    ServerConnector sc = new ServerConnector(server, sslConnectionFactory);
+                    sc.setPort(endpoint.getPort());
+                    sc.setHost(endpoint.getHttpUri().getHost());
+                    answer = sc;
+            }
         }
         if (answer == null) {
             answer = createConnector(server, endpoint);
@@ -577,27 +588,92 @@ public class JettyHttpComponent extends HttpComponent implements RestConsumerFac
             result = createConnectorJetty9(server, endpoint, sslcf, hosto, porto);
         } else {
             result = createConnectorJetty8(server, endpoint, sslcf, hosto, porto);
+            try {
+                if (getSocketConnectorProperties() != null && !"https".equals(endpoint.getProtocol())) {
+                    // must copy the map otherwise it will be deleted
+                    Map<String, Object> properties = new HashMap<String, Object>(getSocketConnectorProperties());
+                    IntrospectionSupport.setProperties(result, properties);
+                    if (properties.size() > 0) {
+                        throw new IllegalArgumentException("There are " + properties.size()
+                            + " parameters that couldn't be set on the SocketConnector."
+                            + " Check the uri if the parameters are spelt correctly and that they are properties of the SelectChannelConnector."
+                            + " Unknown parameters=[" + properties + "]");
+                    }
+                } else if (getSslSocketConnectorProperties() != null && "https".equals(endpoint.getProtocol())) {
+                    // must copy the map otherwise it will be deleted
+                    Map<String, Object> properties = new HashMap<String, Object>(getSslSocketConnectorProperties());
+                    IntrospectionSupport.setProperties(result, properties);
+                    if (properties.size() > 0) {
+                        throw new IllegalArgumentException("There are " + properties.size()
+                            + " parameters that couldn't be set on the SocketConnector."
+                            + " Check the uri if the parameters are spelt correctly and that they are properties of the SelectChannelConnector."
+                            + " Unknown parameters=[" + properties + "]");
+                    }                
+                }
+            } catch (RuntimeException rex) {
+                throw rex;
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }    
         }        
-        
+        return result;
+    }
+    protected AbstractConnector createConnectorJetty9(Server server,
+                                                      JettyHttpEndpoint endpoint,
+                                                      SslContextFactory sslcf,
+                                                      String hosto, int porto) {
         try {
-            result.getClass().getMethod("setPort", Integer.TYPE).invoke(result, porto);
-            if (hosto != null) {
-                result.getClass().getMethod("setHost", String.class).invoke(result, hosto);
+            HttpConfiguration httpConfig = new org.eclipse.jetty.server.HttpConfiguration();
+            httpConfig.setSendServerVersion(endpoint.isSendServerVersion());
+            httpConfig.setSendDateHeader(endpoint.isSendDateHeader());
+            httpConfig.setSendDateHeader(endpoint.isSendDateHeader());
+            
+            if (requestBufferSize != null) {
+            	// Does not work
+                //httpConfig.setRequestBufferSize(requestBufferSize);
             }
+            if (requestHeaderSize != null) {
+                httpConfig.setRequestHeaderSize(requestHeaderSize);
+            }
+            if (responseBufferSize != null) {
+                httpConfig.setOutputBufferSize(responseBufferSize);
+            }
+            if (responseHeaderSize != null) {
+                httpConfig.setResponseHeaderSize(responseHeaderSize);
+            }
+            
+            HttpConnectionFactory httpFactory = new org.eclipse.jetty.server.HttpConnectionFactory(httpConfig); 
+
+            ArrayList<ConnectionFactory> connectionFactories = new ArrayList<ConnectionFactory>();
+            ServerConnector result = new org.eclipse.jetty.server.ServerConnector(server);
+            if (sslcf != null) {
+                httpConfig.addCustomizer(new org.eclipse.jetty.server.SecureRequestCustomizer());
+                SslConnectionFactory scf = new org.eclipse.jetty.server.SslConnectionFactory(sslcf, "HTTP/1.1");
+                connectionFactories.add(scf);
+                result.setDefaultProtocol("SSL-HTTP/1.1");
+            }
+            connectionFactories.add(httpFactory);
+            result.setConnectionFactories(connectionFactories);
+            result.setPort(porto);
+            if (hosto != null) {
+            	result.setHost(hosto);
+            }
+            /*
             if (getSocketConnectorProperties() != null && !"https".equals(endpoint.getProtocol())) {
                 // must copy the map otherwise it will be deleted
                 Map<String, Object> properties = new HashMap<String, Object>(getSocketConnectorProperties());
-                IntrospectionSupport.setProperties(result, properties);
+                IntrospectionSupport.setProperties(httpConfig, properties);
                 if (properties.size() > 0) {
                     throw new IllegalArgumentException("There are " + properties.size()
                         + " parameters that couldn't be set on the SocketConnector."
                         + " Check the uri if the parameters are spelt correctly and that they are properties of the SelectChannelConnector."
                         + " Unknown parameters=[" + properties + "]");
                 }
-            } else if (getSslSocketConnectorProperties() != null && "https".equals(endpoint.getProtocol())) {
+            } else*/
+            if (getSslSocketConnectorProperties() != null && "https".equals(endpoint.getProtocol())) {
                 // must copy the map otherwise it will be deleted
                 Map<String, Object> properties = new HashMap<String, Object>(getSslSocketConnectorProperties());
-                IntrospectionSupport.setProperties(result, properties);
+                IntrospectionSupport.setProperties(sslcf, properties);
                 if (properties.size() > 0) {
                     throw new IllegalArgumentException("There are " + properties.size()
                         + " parameters that couldn't be set on the SocketConnector."
@@ -605,85 +681,12 @@ public class JettyHttpComponent extends HttpComponent implements RestConsumerFac
                         + " Unknown parameters=[" + properties + "]");
                 }                
             }
-
-        } catch (RuntimeException rex) {
-            throw rex;
-        } catch (Exception ex) {
-            throw new RuntimeException(ex);
-        }     
-
-        
-        return result;
-    }
-    protected AbstractConnector createConnectorJetty9(Server server,
-                                                      JettyHttpEndpoint endpoint,
-                                                      SslContextFactory sslcf,
-                                                      String hosto, int porto) {
-        //Jetty 9
-        AbstractConnector result = null;
-        try {
-            Class<?> configClass = ObjectHelper.loadClass("org.eclipse.jetty.server.HttpConfiguration", 
-                                                          Server.class.getClassLoader()); 
-            Object httpConfig = configClass.newInstance();
-            httpConfig.getClass().getMethod("setSendServerVersion", Boolean.TYPE)
-                .invoke(httpConfig, endpoint.isSendServerVersion());
-
-            httpConfig.getClass().getMethod("setSendDateHeader", Boolean.TYPE)
-                .invoke(httpConfig, endpoint.isSendDateHeader());
-
-            httpConfig.getClass().getMethod("setSendDateHeader", Boolean.TYPE)
-                .invoke(httpConfig, endpoint.isSendDateHeader());
-            
-            if (requestBufferSize != null) {
-                configClass.getMethod("setRequestBufferSize", Integer.TYPE)
-                    .invoke(result, requestBufferSize);
-            }
-            if (requestHeaderSize != null) {
-                configClass.getMethod("setRequestHeaderSize", Integer.TYPE)
-                    .invoke(result, requestHeaderSize);
-            }
-            if (responseBufferSize != null) {
-                configClass.getMethod("setOutputBufferSize", Integer.TYPE)
-                    .invoke(result, responseBufferSize);
-            }
-            if (responseHeaderSize != null) {
-                configClass.getMethod("setResponseHeaderSize", Integer.TYPE)
-                    .invoke(result, responseHeaderSize);
-            }
-            
-            
-            Object httpFactory = ObjectHelper.loadClass("org.eclipse.jetty.server.HttpConnectionFactory", 
-                                                        Server.class.getClassLoader())
-                                                            .getConstructor(configClass).newInstance(httpConfig); 
-
-            Collection<Object> connectionFactories = new ArrayList<Object>();
-            result = (AbstractConnector)ObjectHelper.loadClass("org.eclipse.jetty.server.ServerConnector", 
-                                                               Server.class.getClassLoader())
-                                                                   .getConstructor(Server.class)
-                                                                   .newInstance(server);
-            
-            if (sslcf != null) {
-                Class<?> src = ObjectHelper.loadClass("org.eclipse.jetty.server.SecureRequestCustomizer",
-                                                      Server.class.getClassLoader());
-                httpConfig.getClass().getMethod("addCustomizer", src.getInterfaces()[0])
-                    .invoke(httpConfig, src.newInstance());
-                Object scf = ObjectHelper.loadClass("org.eclipse.jetty.server.SslConnectionFactory",
-                                                    Server.class.getClassLoader())
-                                                        .getConstructor(SslContextFactory.class,
-                                                                                     String.class)
-                                                        .newInstance(sslcf, "HTTP/1.1");
-                connectionFactories.add(scf);
-                result.getClass().getMethod("setDefaultProtocol", String.class).invoke(result, "SSL-HTTP/1.1");
-            }
-            connectionFactories.add(httpFactory);
-            result.getClass().getMethod("setConnectionFactories", Collection.class)
-                .invoke(result, connectionFactories);
+            return result;
         } catch (RuntimeException rex) {
             throw rex;
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
-        return result;
     }
     protected AbstractConnector createConnectorJetty8(Server server,
                                                       JettyHttpEndpoint endpoint,
@@ -729,7 +732,10 @@ public class JettyHttpComponent extends HttpComponent implements RestConsumerFac
                 result.getClass().getMethod("setResponseBufferSize", Integer.TYPE)
                     .invoke(result, responseHeaderSize);
             }
-
+            result.getClass().getMethod("setPort", Integer.TYPE).invoke(result, porto);
+            if (hosto != null) {
+                result.getClass().getMethod("setHost", String.class).invoke(result, hosto);
+            }
         } catch (RuntimeException rex) {
             throw rex;
         } catch (Exception ex) {
@@ -760,11 +766,11 @@ public class JettyHttpComponent extends HttpComponent implements RestConsumerFac
         return false;
     }
 
-    public Map<Integer, Connector> getSslSocketConnectors() {
+    public Map<Integer, SslContextFactory> getSslSocketConnectors() {
         return sslSocketConnectors;
     }
 
-    public void setSslSocketConnectors(Map <Integer, Connector> connectors) {
+    public void setSslSocketConnectors(Map <Integer, SslContextFactory> connectors) {
         sslSocketConnectors = connectors;
     }
 
