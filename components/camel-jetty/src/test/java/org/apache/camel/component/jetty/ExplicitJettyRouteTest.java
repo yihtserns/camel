@@ -40,13 +40,6 @@ public class ExplicitJettyRouteTest extends BaseJettyTest {
     protected RouteBuilder createRouteBuilder() throws Exception {
         return new RouteBuilder() {
             public void configure() throws Exception {
-                // START SNIPPET: e1
-                // create jetty component
-                JettyHttpComponent jetty = new JettyHttpComponent();
-                // add jetty to camel context
-                context.addComponent("jetty", jetty);
-                // END SNIPPET: e1
-
                 from("jetty:http://localhost:{{port}}/myapp/myservice").process(new MyBookService());
             }
         };
