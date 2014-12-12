@@ -31,8 +31,7 @@ public class HttpsRouteAliasTest extends HttpsRouteTest {
     protected RouteBuilder createRouteBuilder() throws Exception {
         return new RouteBuilder() {
             public void configure() throws URISyntaxException {
-                // create jetty component
-                JettyHttpComponent jetty = new JettyHttpComponent();
+                JettyHttpComponent jetty = context.getComponent("jetty", JettyHttpComponent.class);
                 
                 KeyStoreParameters ksp = new KeyStoreParameters();
                 ksp.setResource(this.getClass().getClassLoader().getResource("jsse/localhost-alias.ks").toString());
@@ -49,7 +48,6 @@ public class HttpsRouteAliasTest extends HttpsRouteTest {
                 sslContextParameters.setCertAlias("server");
                 jetty.setSslContextParameters(sslContextParameters);
                 setSSLProps(jetty, "", "asdfasdfasdfdasfs", "sadfasdfasdfas");
-                context.addComponent("jetty", jetty);
 
                 from("jetty:https://localhost:" + port1 + "/test").to("mock:a");
 
