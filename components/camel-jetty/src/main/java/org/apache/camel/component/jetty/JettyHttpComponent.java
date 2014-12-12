@@ -95,7 +95,8 @@ import org.slf4j.LoggerFactory;
  *
  * @version 
  */
-public class JettyHttpComponent extends HttpComponent implements RestConsumerFactory {
+@SuppressWarnings("deprecation")
+public abstract class JettyHttpComponent extends HttpComponent implements RestConsumerFactory {
     public static final String TMP_DIR = "CamelJettyTempDir";
     
     protected static final HashMap<String, ConnectorRef> CONNECTORS = new HashMap<String, ConnectorRef>();
@@ -528,6 +529,7 @@ public class JettyHttpComponent extends HttpComponent implements RestConsumerFac
             SslContextFactory con = sslSocketConnectors.get(endpoint.getPort());
             if (con != null) {
                     SslConnectionFactory sslConnectionFactory = new SslConnectionFactory(con, null);
+                    @SuppressWarnings("resource")
                     ServerConnector sc = new ServerConnector(server, sslConnectionFactory);
                     sc.setPort(endpoint.getPort());
                     sc.setHost(endpoint.getHttpUri().getHost());
@@ -788,12 +790,8 @@ public class JettyHttpComponent extends HttpComponent implements RestConsumerFac
      * @param ssl        option SSL parameters
      */
     public CamelHttpClient createHttpClient(JettyHttpEndpoint endpoint, Integer minThreads, Integer maxThreads, SSLContextParameters ssl) throws Exception {
-        CamelHttpClient httpClient = null;
-        if (ssl != null) {
-            httpClient = new CamelHttpClient(createSslContextFactory(ssl));
-        } else {
-            httpClient = new CamelHttpClient();
-        }
+        SslContextFactory sslContextFactory = (ssl != null) ? createSslContextFactory(ssl) : null;
+        CamelHttpClient httpClient = createCamelHttpClient(sslContextFactory);
         
         CamelContext context = endpoint.getCamelContext();
 
@@ -842,6 +840,8 @@ public class JettyHttpComponent extends HttpComponent implements RestConsumerFac
         
         return httpClient;
     }
+
+    protected abstract CamelHttpClient createCamelHttpClient(SslContextFactory sslContextFactory);
 
     public Integer getHttpClientMinThreads() {
         return httpClientMinThreads;
