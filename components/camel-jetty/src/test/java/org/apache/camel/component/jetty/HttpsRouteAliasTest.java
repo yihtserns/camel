@@ -46,7 +46,6 @@ public class HttpsRouteAliasTest extends HttpsRouteTest {
                 
                 // Specify "server" cert alias
                 sslContextParameters.setCertAlias("server");
-                
                 jetty.setSslContextParameters(sslContextParameters);
                 
                 setSSLProps(jetty, "", "asdfasdfasdfdasfs", "sadfasdfasdfas");
