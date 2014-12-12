@@ -18,8 +18,6 @@ package org.apache.camel.component.jetty;
 
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.HashMap;
-import java.util.Map;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
@@ -36,16 +34,9 @@ public class HttpsRouteWithSslConnectorPropertiesTest extends HttpsRouteTest {
                 URL keyStoreUrl = this.getClass().getClassLoader().getResource("jsse/localhost.ks");
                 String path = keyStoreUrl.toURI().getPath();
 
-                // map with properties
-                Map<String, Object> properties = new HashMap<String, Object>();
-                properties.put("keyPassword", pwd);
-                properties.put("password", pwd);
-                properties.put("keystore", path);
-                properties.put("truststoreType", "JKS");
-
                 // create jetty component
                 JettyHttpComponent jetty = new JettyHttpComponent();
-                jetty.setSslSocketConnectorProperties(properties);
+                setSSLProps(jetty, path, pwd, pwd);
 
                 // add jetty to camel context
                 context.addComponent("jetty", jetty);

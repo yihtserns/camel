@@ -73,22 +73,9 @@ public class CamelHttpClient extends HttpClient {
             qtp.setName("CamelJettyClient(" + ObjectHelper.getIdentityHashCode(this) + ")");
             setThreadPoolOrExecutor(qtp);
         }
-        if (Server.getVersion().startsWith("8") && isSupportRedirect()) {
-            setupRedirectListener();
-        }
         super.doStart();
     }
  
-    private void setupRedirectListener() {
-        // setup the listener for it
-        try {
-            getClass().getMethod("registerListener", String.class).invoke(this, CamelRedirectListener.class.getName());
-        } catch (Throwable t) {
-            throw new RuntimeException(t);
-        }
-    }
-    
-    
     private boolean hasThreadPool() {
         try {
             return getClass().getMethod("getExecutor").invoke(this) != null;

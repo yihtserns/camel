@@ -132,7 +132,6 @@ public class DefaultJettyHttpBinding implements JettyHttpBinding {
 
     protected Exception populateHttpOperationFailedException(Exchange exchange, JettyContentExchange httpExchange,
                                                                                 int responseCode) throws IOException {
-        HttpOperationFailedException answer;
         String uri = httpExchange.getUrl();
         Map<String, String> headers = getSimpleMap(httpExchange.getResponseHeaders());
         Object responseBody = extractResponseBody(exchange, httpExchange);
@@ -152,20 +151,15 @@ public class DefaultJettyHttpBinding implements JettyHttpBinding {
             if (this.supportRedirect) {
                 return null;
             }
-            Collection<String> loc = httpExchange.getResponseHeaders().get("location");
-            if (loc != null && !loc.isEmpty()) {
-                String locationHeader = loc.iterator().next();
-                answer = new HttpOperationFailedException(uri, responseCode, null, locationHeader, headers, copy);
-            } else {
-                // no redirect location
-                answer = new HttpOperationFailedException(uri, responseCode, null, null, headers, copy);
+            String loc = headers.get("location");
+            if (loc == null) {
+                loc = headers.get("Location");
             }
+            return new HttpOperationFailedException(uri, responseCode, null, loc, headers , copy);
         } else {
             // internal server error (error code 500)
-            answer = new HttpOperationFailedException(uri, responseCode, null, null, headers, copy);
+            return new HttpOperationFailedException(uri, responseCode, null, null, headers, copy);
         }
-
-        return answer;
     }
 
     protected Object extractResponseBody(Exchange exchange, JettyContentExchange httpExchange) throws IOException {
