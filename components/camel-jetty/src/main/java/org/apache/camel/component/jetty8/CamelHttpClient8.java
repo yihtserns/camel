@@ -1,7 +1,8 @@
-package org.apache.camel.component.jetty;
+package org.apache.camel.component.jetty8;
 
 import java.util.concurrent.Executor;
 
+import org.apache.camel.component.jetty.CamelHttpClient;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.ThreadPool;

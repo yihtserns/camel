@@ -34,6 +34,7 @@ import org.apache.camel.Message;
 import org.apache.camel.component.http.HttpConstants;
 import org.apache.camel.component.http.HttpMethods;
 import org.apache.camel.component.http.helper.HttpHelper;
+import org.apache.camel.component.jetty9.JettyContentExchange9;
 import org.apache.camel.impl.DefaultProducer;
 import org.apache.camel.spi.HeaderFilterStrategy;
 import org.apache.camel.util.AsyncProcessorHelper;

@@ -748,7 +748,9 @@ public abstract class JettyHttpComponent extends HttpComponent implements RestCo
     
     private SslContextFactory createSslContextFactory(SSLContextParameters ssl) throws GeneralSecurityException, IOException {
         SslContextFactory answer = new SslContextFactory();
-        answer.setSslContext(ssl.createSSLContext());
+        if (ssl != null) {
+            answer.setSslContext(ssl.createSSLContext());
+        }
         return answer;
     }
     
@@ -790,7 +792,7 @@ public abstract class JettyHttpComponent extends HttpComponent implements RestCo
      * @param ssl        option SSL parameters
      */
     public CamelHttpClient createHttpClient(JettyHttpEndpoint endpoint, Integer minThreads, Integer maxThreads, SSLContextParameters ssl) throws Exception {
-        SslContextFactory sslContextFactory = (ssl != null) ? createSslContextFactory(ssl) : null;
+        SslContextFactory sslContextFactory = createSslContextFactory(ssl);
         CamelHttpClient httpClient = createCamelHttpClient(sslContextFactory);
         
         CamelContext context = endpoint.getCamelContext();

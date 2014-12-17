@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.camel.component.jetty;
+package org.apache.camel.component.jetty9;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -32,6 +32,8 @@ import org.apache.camel.AsyncCallback;
 import org.apache.camel.CamelExchangeException;
 import org.apache.camel.Exchange;
 import org.apache.camel.ExchangeTimedOutException;
+import org.apache.camel.component.jetty.JettyContentExchange;
+import org.apache.camel.component.jetty.JettyHttpBinding;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.client.api.Response;
