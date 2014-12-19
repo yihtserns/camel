@@ -30,9 +30,11 @@ public class JettyHttpContentTypeTest extends BaseJettyTest {
     @Test
     public void testContentType() throws Exception {
         getMockEndpoint("mock:input").expectedBodiesReceived("Hello World");
-        getMockEndpoint("mock:input").expectedHeaderReceived(Exchange.CONTENT_TYPE, "text/plain; charset=\"" + CHARSET +"\"");
+        getMockEndpoint("mock:input").expectedHeaderReceived(Exchange.CONTENT_TYPE,
+                                                             "text/plain; charset=\"" + CHARSET + "\"");
         getMockEndpoint("mock:input").expectedHeaderReceived(Exchange.HTTP_CHARACTER_ENCODING, CHARSET);
-        getMockEndpoint("mock:input").expectedHeaderReceived(Exchange.HTTP_URL, "http://0.0.0.0:" + getPort() + "/foo");
+        getMockEndpoint("mock:input").expectedHeaderReceived(Exchange.HTTP_URL,
+                                                             "http://0.0.0.0:" + getPort() + "/foo");
         getMockEndpoint("mock:input").expectedPropertyReceived(Exchange.CHARSET_NAME, CHARSET);
 
         byte[] data = "Hello World".getBytes(Charset.forName(CHARSET));
@@ -49,14 +51,15 @@ public class JettyHttpContentTypeTest extends BaseJettyTest {
     @Test
     public void testContentTypeWithAction() throws Exception {
         getMockEndpoint("mock:input").expectedBodiesReceived("Hello World");
-        getMockEndpoint("mock:input").expectedHeaderReceived(Exchange.CONTENT_TYPE, "text/plain;charset=\""+ CHARSET + "\";action=\"http://somewhere.com/foo\"");
+        getMockEndpoint("mock:input").expectedHeaderReceived(Exchange.CONTENT_TYPE,
+                                                             "text/plain;charset=\"" + CHARSET + "\";action=\"http://somewhere.com/foo\"");
         getMockEndpoint("mock:input").expectedHeaderReceived(Exchange.HTTP_CHARACTER_ENCODING, CHARSET);
         getMockEndpoint("mock:input").expectedHeaderReceived(Exchange.HTTP_URL, "http://0.0.0.0:" + getPort() + "/foo");
         getMockEndpoint("mock:input").expectedPropertyReceived(Exchange.CHARSET_NAME, CHARSET);
 
         byte[] data = "Hello World".getBytes(Charset.forName(CHARSET));
         String out = template.requestBodyAndHeader("jetty:http://0.0.0.0:{{port}}/foo", data,
-                "content-type", "text/plain;charset=\""+ CHARSET + "\";action=\"http://somewhere.com/foo\"", String.class);
+                "content-type", "text/plain;charset=\"" + CHARSET + "\";action=\"http://somewhere.com/foo\"", String.class);
         assertEquals("Bye World", out);
 
         assertMockEndpointsSatisfied();

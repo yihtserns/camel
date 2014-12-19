@@ -528,12 +528,12 @@ public abstract class JettyHttpComponent extends HttpComponent implements RestCo
         if (sslSocketConnectors != null) {
             SslContextFactory con = sslSocketConnectors.get(endpoint.getPort());
             if (con != null) {
-                    SslConnectionFactory sslConnectionFactory = new SslConnectionFactory(con, null);
-                    @SuppressWarnings("resource")
-                    ServerConnector sc = new ServerConnector(server, sslConnectionFactory);
-                    sc.setPort(endpoint.getPort());
-                    sc.setHost(endpoint.getHttpUri().getHost());
-                    answer = sc;
+                SslConnectionFactory sslConnectionFactory = new SslConnectionFactory(con, null);
+                @SuppressWarnings("resource")
+                ServerConnector sc = new ServerConnector(server, sslConnectionFactory);
+                sc.setPort(endpoint.getPort());
+                sc.setHost(endpoint.getHttpUri().getHost());
+                answer = sc;
             }
         }
         if (answer == null) {
@@ -631,7 +631,7 @@ public abstract class JettyHttpComponent extends HttpComponent implements RestCo
             httpConfig.setSendDateHeader(endpoint.isSendDateHeader());
             
             if (requestBufferSize != null) {
-            	// Does not work
+                // Does not work
                 //httpConfig.setRequestBufferSize(requestBufferSize);
             }
             if (requestHeaderSize != null) {
@@ -658,7 +658,7 @@ public abstract class JettyHttpComponent extends HttpComponent implements RestCo
             result.setConnectionFactories(connectionFactories);
             result.setPort(porto);
             if (hosto != null) {
-            	result.setHost(hosto);
+                result.setHost(hosto);
             }
             /*
             if (getSocketConnectorProperties() != null && !"https".equals(endpoint.getProtocol())) {

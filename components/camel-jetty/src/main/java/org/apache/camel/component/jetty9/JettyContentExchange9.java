@@ -102,7 +102,7 @@ public class JettyContentExchange9 implements JettyContentExchange {
         } catch (Exception e) {
             exchange.setException(e);
         } finally {
-        	callback.done(false);
+            callback.done(false);
         }
     }
 
@@ -145,7 +145,7 @@ public class JettyContentExchange9 implements JettyContentExchange {
         try {
             return this.request.getURI().toURL().toExternalForm();
         } catch (MalformedURLException e) {
-                throw new IllegalStateException(e.getMessage(), e);
+            throw new IllegalStateException(e.getMessage(), e);
         }
     }
     
@@ -202,7 +202,7 @@ public class JettyContentExchange9 implements JettyContentExchange {
      * @see org.apache.camel.component.jetty.JettyContentExchangeI#setTimeout(long)
      */
     public void setTimeout(long timeout) {
-    	this.request.timeout(timeout, TimeUnit.MILLISECONDS);
+        this.request.timeout(timeout, TimeUnit.MILLISECONDS);
     }
     
     /* (non-Javadoc)
@@ -216,15 +216,15 @@ public class JettyContentExchange9 implements JettyContentExchange {
      * @see org.apache.camel.component.jetty.JettyContentExchangeI#setRequestContent(byte[])
      */
     public void setRequestContent(byte[] byteArray) {
-    	this.request.content(new BytesContentProvider(byteArray), this.requestContentType);
+        this.request.content(new BytesContentProvider(byteArray), this.requestContentType);
     }
 
     /* (non-Javadoc)
      * @see org.apache.camel.component.jetty.JettyContentExchangeI#setRequestContent(java.lang.String, java.lang.String)
      */
     public void setRequestContent(String data, String charset) throws UnsupportedEncodingException {
-    	StringContentProvider cp = charset != null ? new StringContentProvider(data, charset) : new StringContentProvider(data);
-    	this.request.content(cp, this.requestContentType);
+        StringContentProvider cp = charset != null ? new StringContentProvider(data, charset) : new StringContentProvider(data);
+        this.request.content(cp, this.requestContentType);
     }
     /* (non-Javadoc)
      * @see org.apache.camel.component.jetty.JettyContentExchangeI#setRequestContent(java.io.InputStream)
