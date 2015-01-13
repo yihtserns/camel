@@ -45,7 +45,7 @@ public class HttpProducerSendEmptyHeaderTest extends BaseJettyTest {
         return new RouteBuilder() {
             @Override
             public void configure() throws Exception {
-                from("jetty:http://localhost:{{port}}/myapp/mytest?allowNullValues=true")
+                from("jetty:http://localhost:{{port}}/myapp/mytest")
                     .convertBodyTo(String.class)
                     .to("mock:result");
             }

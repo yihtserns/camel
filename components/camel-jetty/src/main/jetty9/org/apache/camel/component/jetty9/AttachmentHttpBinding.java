@@ -1,4 +1,4 @@
-package org.apache.camel.component.jetty;
+package org.apache.camel.component.jetty9;
 
 import java.io.IOException;
 import java.io.InputStream;

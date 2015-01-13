@@ -16,8 +16,16 @@
  */
 package org.apache.camel.component.jetty8;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.camel.component.jetty.CamelHttpClient;
 import org.apache.camel.component.jetty.JettyHttpComponent;
+import org.apache.camel.component.jetty.JettyHttpEndpoint;
+import org.apache.camel.util.IntrospectionSupport;
+import org.apache.camel.util.ObjectHelper;
+import org.eclipse.jetty.server.AbstractConnector;
+import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 
 public class JettyHttpComponent8 extends JettyHttpComponent {
@@ -26,4 +34,92 @@ public class JettyHttpComponent8 extends JettyHttpComponent {
         return new CamelHttpClient8(sslContextFactory);
     }
 
+    protected AbstractConnector createConnectorJettyInternal(Server server,
+                                                      JettyHttpEndpoint endpoint,
+                                                      SslContextFactory sslcf) {
+        //Jetty 8
+        AbstractConnector result = null;
+        String hosto = endpoint.getHttpUri().getHost();
+        int porto = endpoint.getPort();
+        try {
+            if (sslcf == null && !"https".equals(endpoint.getProtocol())) { 
+                result = (AbstractConnector)ObjectHelper
+                    .loadClass("org.eclipse.jetty.server.nio.SelectChannelConnector",
+                               Server.class.getClassLoader()).newInstance();
+            } else if (sslcf == null) {
+                result = (AbstractConnector)ObjectHelper
+                    .loadClass("org.eclipse.jetty.server.ssl.SslSelectChannelConnector",
+                               Server.class.getClassLoader()).newInstance();
+            } else {
+                result = (AbstractConnector)ObjectHelper
+                    .loadClass("org.eclipse.jetty.server.ssl.SslSelectChannelConnector",
+                               Server.class.getClassLoader()).getConstructor(SslContextFactory.class)
+                               .newInstance(sslcf);
+            }
+            Server.class.getMethod("setSendServerVersion", Boolean.TYPE).invoke(server, 
+                                                                                endpoint.isSendServerVersion());
+            
+            Server.class.getMethod("setSendDateHeader", Boolean.TYPE).invoke(server, 
+                                                                             endpoint.isSendDateHeader());
+            
+            
+            if (result != null && requestBufferSize != null) {
+                result.getClass().getMethod("setRequestBufferSize", Integer.TYPE)
+                    .invoke(result, requestBufferSize);
+            }
+            if (result != null && requestHeaderSize != null) {
+                result.getClass().getMethod("setRequestHeaderSize", Integer.TYPE)
+                    .invoke(result, requestHeaderSize);
+            }
+            if (result != null && responseBufferSize != null) {
+                result.getClass().getMethod("setResponseBufferSize", Integer.TYPE)
+                    .invoke(result, responseBufferSize);
+            }
+            if (result != null && responseHeaderSize != null) {
+                result.getClass().getMethod("setResponseBufferSize", Integer.TYPE)
+                    .invoke(result, responseHeaderSize);
+            }
+            result.getClass().getMethod("setPort", Integer.TYPE).invoke(result, porto);
+            if (hosto != null) {
+                result.getClass().getMethod("setHost", String.class).invoke(result, hosto);
+            }
+        } catch (RuntimeException rex) {
+            throw rex;
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+        try {
+            result.getClass().getMethod("setPort", Integer.TYPE).invoke(result, porto);
+            if (hosto != null) {
+                result.getClass().getMethod("setHost", String.class).invoke(result, hosto);
+            }
+            if (getSocketConnectorProperties() != null && !"https".equals(endpoint.getProtocol())) {
+                // must copy the map otherwise it will be deleted
+                Map<String, Object> properties = new HashMap<String, Object>(getSocketConnectorProperties());
+                IntrospectionSupport.setProperties(result, properties);
+                if (properties.size() > 0) {
+                    throw new IllegalArgumentException("There are " + properties.size()
+                        + " parameters that couldn't be set on the SocketConnector."
+                        + " Check the uri if the parameters are spelt correctly and that they are properties of the SelectChannelConnector."
+                        + " Unknown parameters=[" + properties + "]");
+                }
+            } else if (getSslSocketConnectorProperties() != null && "https".equals(endpoint.getProtocol())) {
+                // must copy the map otherwise it will be deleted
+                Map<String, Object> properties = new HashMap<String, Object>(getSslSocketConnectorProperties());
+                IntrospectionSupport.setProperties(result, properties);
+                if (properties.size() > 0) {
+                    throw new IllegalArgumentException("There are " + properties.size()
+                        + " parameters that couldn't be set on the SocketConnector."
+                        + " Check the uri if the parameters are spelt correctly and that they are properties of the SelectChannelConnector."
+                        + " Unknown parameters=[" + properties + "]");
+                }                
+            }
+
+        } catch (RuntimeException rex) {
+            throw rex;
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+        return result;
+    }  
 }

@@ -28,7 +28,6 @@ import org.apache.camel.Consumer;
 import org.apache.camel.Processor;
 import org.apache.camel.Producer;
 import org.apache.camel.ResolveEndpointFailedException;
-import org.apache.camel.component.http.HttpBinding;
 import org.apache.camel.component.http.HttpConsumer;
 import org.apache.camel.component.http.HttpEndpoint;
 import org.apache.camel.impl.SynchronousDelegateProducer;
@@ -78,10 +77,6 @@ public class JettyHttpEndpoint extends HttpEndpoint {
     @Override
     public JettyHttpComponent getComponent() {
         return (JettyHttpComponent) super.getComponent();
-    }
-    
-    public HttpBinding getBinding() {
-        return new AttachmentHttpBinding(this);
     }
 
     @Override

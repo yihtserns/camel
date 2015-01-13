@@ -23,6 +23,7 @@ import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.ThreadPool;
 
+@SuppressWarnings("unchecked")
 public class CamelHttpClient8 extends CamelHttpClient {
 
     public CamelHttpClient8(SslContextFactory sslContextFactory) {
@@ -30,6 +31,12 @@ public class CamelHttpClient8 extends CamelHttpClient {
         setConnectorType();
     }
     
+    @Override
+    protected void doStart() throws Exception {
+        setupRedirectListener();
+        super.doStart();
+    }
+
     private void setConnectorType() {
         try {
             HttpClient.class.getMethod("setConnectorType", Integer.TYPE).invoke(this, 2);
@@ -60,6 +67,15 @@ public class CamelHttpClient8 extends CamelHttpClient {
             Class<?> c = Class.forName("org.eclipse.jetty.client.Address");
             Object o = c.getConstructor(String.class, Integer.TYPE).newInstance(host, port);
             this.getClass().getMethod("setProxy", c).invoke(this, o);
+        } catch (Throwable t) {
+            throw new RuntimeException(t);
+        }
+    }
+
+    private void setupRedirectListener() {
+        // setup the listener for it
+        try {
+            getClass().getMethod("registerListener", String.class).invoke(this, CamelRedirectListener.class.getName());
         } catch (Throwable t) {
             throw new RuntimeException(t);
         }

@@ -115,4 +115,5 @@ public abstract class BaseJettyTest extends CamelTestSupport {
         String majorVersion = Server.getVersion().split("\\.")[0];
         return "8".equals(majorVersion);
     }
+
 }

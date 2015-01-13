@@ -34,10 +34,9 @@ import org.apache.camel.Message;
 import org.apache.camel.component.http.HttpConstants;
 import org.apache.camel.component.http.HttpMethods;
 import org.apache.camel.component.http.helper.HttpHelper;
-import org.apache.camel.component.jetty9.JettyContentExchange9;
-import org.apache.camel.impl.DefaultProducer;
+import org.apache.camel.component.jetty8.JettyContentExchange8;
+import org.apache.camel.impl.DefaultAsyncProducer;
 import org.apache.camel.spi.HeaderFilterStrategy;
-import org.apache.camel.util.AsyncProcessorHelper;
 import org.apache.camel.util.ExchangeHelper;
 import org.apache.camel.util.IOHelper;
 import org.apache.camel.util.ObjectHelper;
@@ -50,7 +49,7 @@ import org.slf4j.LoggerFactory;
 /**
  * @version 
  */
-public class JettyHttpProducer extends DefaultProducer implements AsyncProcessor {
+public class JettyHttpProducer extends DefaultAsyncProducer implements AsyncProcessor {
     private static final Logger LOG = LoggerFactory.getLogger(JettyHttpProducer.class);
     private HttpClient client;
     private boolean sharedClient;
@@ -82,10 +81,6 @@ public class JettyHttpProducer extends DefaultProducer implements AsyncProcessor
     @Override
     public JettyHttpEndpoint getEndpoint() {
         return (JettyHttpEndpoint) super.getEndpoint();
-    }
-
-    public void process(Exchange exchange) throws Exception {
-        AsyncProcessorHelper.process(this, exchange);
     }
 
     public boolean process(Exchange exchange, final AsyncCallback callback) {
@@ -121,7 +116,7 @@ public class JettyHttpProducer extends DefaultProducer implements AsyncProcessor
         HttpMethods methodToUse = HttpHelper.createMethod(exchange, getEndpoint(), exchange.getIn().getBody() != null);
         String method = methodToUse.createMethod(url).getName();
 
-        JettyContentExchange httpExchange = new JettyContentExchange9(exchange, getBinding(), client);
+        JettyContentExchange httpExchange = new JettyContentExchange8(exchange, getBinding(), client);
         httpExchange.setURL(url); // Url has to be set first
         httpExchange.setMethod(method);
         
@@ -171,6 +166,11 @@ public class JettyHttpProducer extends DefaultProducer implements AsyncProcessor
                     // then fallback to input stream
                     InputStream is = exchange.getContext().getTypeConverter().mandatoryConvertTo(InputStream.class, exchange, exchange.getIn().getBody());
                     httpExchange.setRequestContent(is);
+                    // setup the content length if it is possible
+                    String length = exchange.getIn().getHeader(Exchange.CONTENT_LENGTH, String.class);
+                    if (ObjectHelper.isNotEmpty(length)) {
+                        httpExchange.addRequestHeader(Exchange.CONTENT_LENGTH, length);
+                    }
                 }
             }
         }

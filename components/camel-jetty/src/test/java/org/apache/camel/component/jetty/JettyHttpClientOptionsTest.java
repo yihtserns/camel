@@ -19,7 +19,7 @@ package org.apache.camel.component.jetty;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.http.HttpEndpoint;
 import org.apache.camel.component.http.HttpProducer;
-import org.eclipse.jetty.client.ProxyConfiguration.Proxy;
+import org.eclipse.jetty.client.HttpClient;
 import org.junit.Test;
 
 /**
@@ -46,18 +46,14 @@ public class JettyHttpClientOptionsTest extends BaseJettyTest {
         HttpEndpoint jettyEndpoint = context.getEndpoint("jetty://http://localhost:{{port}}/proxy/setting?proxyHost=192.168.0.1&proxyPort=9090", HttpEndpoint.class);
         assertNotNull("Jetty endpoint should not be null ", jettyEndpoint);
         JettyHttpProducer producer = (JettyHttpProducer)jettyEndpoint.createProducer();
-        Proxy proxy = producer.getClient().getProxyConfiguration().getProxies().get(0);
-        assertEquals("Get the wrong http proxy host parameter", "192.168.0.1", proxy.getAddress().getHost());
-        assertEquals("Get the wrong http proxy port paramerter", 9090, proxy.getAddress().getPort());
-        
+        assertProxyAddress(producer.getClient(), "192.168.0.1", 9090);
+
         // setup the context properties
         context.getProperties().put("http.proxyHost", "192.168.0.2");
         context.getProperties().put("http.proxyPort", "8080");
         jettyEndpoint = context.getEndpoint("jetty://http://localhost:{{port}}/proxy2/setting", HttpEndpoint.class);
         producer = (JettyHttpProducer)jettyEndpoint.createProducer();
-        proxy = producer.getClient().getProxyConfiguration().getProxies().get(0);
-        assertEquals("Get the wrong http proxy host parameter", "192.168.0.2", proxy.getAddress().getHost());
-        assertEquals("Get the wrong http proxy port paramerter", 8080, proxy.getAddress().getPort());
+        assertProxyAddress(producer.getClient(), "192.168.0.2", 8080);
         context.getProperties().clear();
 
     }
@@ -70,6 +66,13 @@ public class JettyHttpClientOptionsTest extends BaseJettyTest {
                 from("jetty:http://localhost:{{port}}/myapp/myservice?httpClient.soTimeout=5555").transform().constant("Bye World");
             }
         };
+    }
+    
+    private void assertProxyAddress(HttpClient client, String expectedHost, int expectedPort) {
+        //org.eclipse.jetty.client.Origin.Address address = client.getProxyConfiguration().getProxies().get(0).getAddress();
+        org.eclipse.jetty.client.Address address = client.getProxy();
+        assertEquals("Got the wrong http proxy host parameter", expectedHost, address.getHost());
+        assertEquals("Got the wrong http proxy port paramerter", expectedPort, address.getPort());
     }
 
 }
