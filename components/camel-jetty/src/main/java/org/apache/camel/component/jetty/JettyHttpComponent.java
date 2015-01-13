@@ -129,6 +129,7 @@ public abstract class JettyHttpComponent extends HttpComponent implements RestCo
     protected Integer responseBufferSize;
     protected Integer responseHeaderSize;
     protected String proxyHost;
+    protected ErrorHandler errorHandler;
     private Integer proxyPort;
 
     public JettyHttpComponent() {
@@ -503,6 +504,14 @@ public abstract class JettyHttpComponent extends HttpComponent implements RestCo
     }
 
     
+    public ErrorHandler getErrorHandler() {
+        return errorHandler;
+    }
+
+    public void setErrorHandler(ErrorHandler errorHandler) {
+        this.errorHandler = errorHandler;
+    }
+
     protected Connector getConnector(Server server, JettyHttpEndpoint endpoint) {
         Connector connector;
         if ("https".equals(endpoint.getProtocol())) {
@@ -1221,8 +1230,10 @@ public abstract class JettyHttpComponent extends HttpComponent implements RestCo
         }
         ContextHandlerCollection collection = new ContextHandlerCollection();
         s.setHandler(collection);
-
-        if (!Server.getVersion().startsWith("8")) {
+        // setup the error handler if it set to Jetty component
+        if (getErrorHandler() != null) {
+            s.addBean(getErrorHandler());
+        } else if (!Server.getVersion().startsWith("8")) {
             //need an error handler that won't leak information about the exception 
             //back to the client.
             ErrorHandler eh = new ErrorHandler() {

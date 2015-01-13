@@ -132,6 +132,7 @@ public class DefaultJettyHttpBinding implements JettyHttpBinding {
 
     protected Exception populateHttpOperationFailedException(Exchange exchange, JettyContentExchange httpExchange,
                                                                                 int responseCode) throws IOException {
+        HttpOperationFailedException answer;
         String uri = httpExchange.getUrl();
         Map<String, String> headers = getSimpleMap(httpExchange.getResponseHeaders());
         Object responseBody = extractResponseBody(exchange, httpExchange);
@@ -151,15 +152,20 @@ public class DefaultJettyHttpBinding implements JettyHttpBinding {
             if (this.supportRedirect) {
                 return null;
             }
-            String loc = headers.get("location");
-            if (loc == null) {
-                loc = headers.get("Location");
+            Collection<String> loc = httpExchange.getResponseHeaders().get("location");
+            if (loc != null && !loc.isEmpty()) {
+                String locationHeader = loc.iterator().next();
+                answer = new HttpOperationFailedException(uri, responseCode, null, locationHeader, headers, copy);
+            } else {
+                // no redirect location
+                answer = new HttpOperationFailedException(uri, responseCode, null, null, headers, copy);
             }
-            return new HttpOperationFailedException(uri, responseCode, null, loc, headers , copy);
         } else {
             // internal server error (error code 500)
-            return new HttpOperationFailedException(uri, responseCode, null, null, headers, copy);
+            answer = new HttpOperationFailedException(uri, responseCode, null, null, headers, copy);
         }
+
+        return answer;
     }
 
     protected Object extractResponseBody(Exchange exchange, JettyContentExchange httpExchange) throws IOException {
@@ -186,7 +192,7 @@ public class DefaultJettyHttpBinding implements JettyHttpBinding {
     }
 
     Map<String, String> getSimpleMap(Map<String, Collection<String>> headers) {
-        Map<String, String> result = new HashMap<String, String>();
+        Map<String, String> result = new HashMap<String , String>();
         for (String key : headers.keySet()) {
             Collection<String> valueCol = headers.get(key);
             String value = (valueCol == null) ? null : valueCol.iterator().next();
