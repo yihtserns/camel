@@ -15,17 +15,17 @@
  * limitations under the License.
  */
 package org.apache.camel.itest.osgi;
+
 import java.io.File;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import javax.inject.Inject;
 
 import org.apache.camel.CamelContext;
-import org.apache.camel.osgi.CamelContextFactory;
+import org.apache.camel.core.osgi.OsgiDefaultCamelContext;
 import org.apache.camel.test.junit4.CamelTestSupport;
 import org.ops4j.pax.exam.Configuration;
 import org.ops4j.pax.exam.Option;
@@ -67,10 +67,7 @@ public class OSGiIntegrationTestSupport extends CamelTestSupport {
 
         setThreadContextClassLoader();
 
-        CamelContextFactory factory = new CamelContextFactory();
-        factory.setBundleContext(bundleContext);
-        factory.setRegistry(createRegistry());
-        return factory.createContext();
+        return new OsgiDefaultCamelContext(bundleContext, createRegistry());
     }
     
     protected void setThreadContextClassLoader() {

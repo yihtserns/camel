@@ -45,6 +45,8 @@
     <feature version='[1.2,2)'>spring-dm</feature>
     <feature version='${spring-version-range-karaf}'>spring-tx</feature>
     <feature version='${project.version}'>camel-core</feature>
+    <feature>eventadmin</feature>
+    <bundle dependency='true'>mvn:org.apache.camel/camel-core-osgi/${project.version}</bundle>
     <bundle>mvn:org.apache.camel/camel-spring/${project.version}</bundle>
   </feature>
   <feature name='camel-blueprint' version='${project.version}' resolver='(obr)' start-level='50'>

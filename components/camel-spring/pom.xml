@@ -32,7 +32,6 @@
   <properties>
       <camel.osgi.import>
         !org.apache.camel.spring.*,
-        !org.apache.camel.osgi.*,
         !org.apache.camel.component,
         !org.apache.camel.component.event,
         !org.apache.camel.language.spel,
@@ -45,22 +44,17 @@
       </camel.osgi.import>
       <camel.osgi.export>
         org.apache.camel.spring.*;${camel.osgi.version},
-        org.apache.camel.osgi.*;${camel.osgi.version},
         org.apache.camel.util.spring.*;${camel.osgi.version},
         org.apache.camel.component.event;${camel.osgi.split.pkg};${camel.osgi.version},
         org.apache.camel.language.spel;${camel.osgi.split.pkg};${camel.osgi.version}
       </camel.osgi.export>
       <camel.osgi.private.pkg>
-        org.apache.camel.core.osgi*,
         org.apache.camel.core.xml*
       </camel.osgi.private.pkg>
       <camel.osgi.export.service>
         org.apache.camel.spi.ComponentResolver;component=spring-event,
         org.apache.camel.spi.LanguageResolver;language=spel
       </camel.osgi.export.service>
-      <camel.osgi.activator>
-        org.apache.camel.osgi.Activator
-      </camel.osgi.activator>
       <!-- do not skip any tests by default -->
       <platform.skip.tests />
   </properties>
@@ -74,6 +68,13 @@
       <groupId>org.apache.camel</groupId>
       <artifactId>camel-core-xml</artifactId>
       <scope>provided</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.camel</groupId>
+      <artifactId>camel-core-osgi</artifactId>
+      <scope>provided</scope>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.springframework</groupId>
@@ -86,12 +87,6 @@
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-tx</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.camel</groupId>
-      <artifactId>camel-core-osgi</artifactId>
-      <scope>provided</scope>
-      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.osgi</groupId>
@@ -321,7 +316,6 @@
               <target>
                 <echo>Including source code from camel-core-xml in the camel-spring-sources.jar</echo>
                 <jar destfile="${project.build.directory}/${project.artifactId}-${project.version}-sources.jar" update="true">
-                  <fileset dir="${basedir}/../camel-core-osgi/src/main/java" includes="**/*" />
                   <fileset dir="${basedir}/../camel-core-xml/src/main/java" includes="**/*" />
                 </jar>
               </target>
@@ -349,7 +343,6 @@
           </execution>
         </executions>
       </plugin>
-      <!-- add the sources from camel-core-osgi and camel-core-xml as source code in the camel-spring-sources.jar -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>

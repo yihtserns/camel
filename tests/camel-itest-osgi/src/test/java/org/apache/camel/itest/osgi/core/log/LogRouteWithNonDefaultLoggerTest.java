@@ -19,9 +19,8 @@ package org.apache.camel.itest.osgi.core.log;
 import java.io.File;
 
 import org.apache.camel.CamelContext;
-import org.apache.camel.impl.SimpleRegistry;
+import org.apache.camel.impl.JndiRegistry;
 import org.apache.camel.itest.osgi.OSGiIntegrationTestSupport;
-import org.apache.camel.osgi.CamelContextFactory;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.Configuration;
@@ -70,17 +69,16 @@ public class LogRouteWithNonDefaultLoggerTest extends OSGiIntegrationTestSupport
         LOG.info("Get the bundleContext is {}", bundleContext);
         LOG.info("Application installed as bundle id: {}", bundleContext.getBundle().getBundleId());
 
-        setThreadContextClassLoader();
-
-        CamelContextFactory factory = new CamelContextFactory();
-        factory.setBundleContext(bundleContext);
-        SimpleRegistry registry = new SimpleRegistry();
-        registry.put("mylogger", LoggerFactory.getLogger("org.apache.camel.SIFT"));
-        factory.setRegistry(registry);
-        CamelContext camelContext = factory.createContext();
-        camelContext.setApplicationContextClassLoader(getClass().getClassLoader());
+        CamelContext camelContext = super.createCamelContext();
         camelContext.setUseMDCLogging(true);
         return camelContext;
+    }
+
+    @Override
+    protected JndiRegistry createRegistry() throws Exception {
+        JndiRegistry registry = new JndiRegistry();
+        registry.bind("mylogger", LoggerFactory.getLogger("org.apache.camel.SIFT"));
+        return registry;
     }
 
     @Configuration
