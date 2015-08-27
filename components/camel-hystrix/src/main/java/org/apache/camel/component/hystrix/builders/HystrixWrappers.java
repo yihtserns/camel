@@ -98,7 +98,7 @@ public final class HystrixWrappers {
             return thisBuilder();
         }
 
-        public T withSuppressedExceptions(Class<? extends Throwable>... throwables) {
+        public T suppressFallbackForExceptions(Class<? extends Throwable>... throwables) {
             Set<Class<? extends Throwable>> t = new HashSet<>(Arrays.asList(throwables));
             configuration.setExceptionsSuppressingFallback(t);
             return thisBuilder();

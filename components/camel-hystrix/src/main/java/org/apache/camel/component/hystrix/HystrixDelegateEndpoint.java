@@ -74,16 +74,8 @@ public class HystrixDelegateEndpoint extends DefaultEndpoint {
         return target;
     }
 
-    public void setTarget(Endpoint target) {
-        this.target = target;
-    }
-
     public Producer getProducer() {
         return producer;
-    }
-
-    public void setProducer(Producer producer) {
-        this.producer = producer;
     }
 
     public HystrixConfiguration getConfiguration() {

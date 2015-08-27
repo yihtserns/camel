@@ -90,7 +90,7 @@ public class HystrixProcessorTest extends AbstractHystrixTest {
                     }
                 }, setter)
                 .withFallbackProcessor(fallback)
-                .withSuppressedExceptions(DummyException.class)
+                .suppressFallbackForExceptions(DummyException.class)
                 .build();
 
         ServiceHelper.startService(hystrixP);
@@ -113,7 +113,7 @@ public class HystrixProcessorTest extends AbstractHystrixTest {
                     }
                 }, setter)
                 .withFallbackProcessor(fallback)
-                .withSuppressedExceptions(DummyException.class)
+                .suppressFallbackForExceptions(DummyException.class)
                 .build();
 
         ServiceHelper.startService(hystrixP);
