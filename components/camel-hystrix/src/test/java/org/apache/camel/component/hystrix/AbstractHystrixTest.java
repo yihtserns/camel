@@ -19,9 +19,11 @@ package org.apache.camel.component.hystrix;
 import com.netflix.hystrix.HystrixCommandGroupKey;
 import com.netflix.hystrix.HystrixCommandKey;
 import com.netflix.hystrix.HystrixObservableCommand;
+import com.netflix.hystrix.strategy.concurrency.HystrixRequestContext;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.test.junit4.CamelTestSupport;
+import org.junit.After;
 
 /**
  * Abstract Hystrix test.
@@ -52,6 +54,22 @@ public abstract class AbstractHystrixTest extends CamelTestSupport {
     @Override
     protected void doPostSetup() throws Exception {
         hystrix = context.getComponent("hystrix", HystrixComponent.class);
+    }
+
+    /**
+     * Remove the HystrixRequestContext from the current thread, if one is present.
+     * @throws Exception
+     */
+    @After
+    public void tearDown() throws Exception {
+        super.tearDown();
+        HystrixRequestContext.setContextOnCurrentThread(null);
+    }
+
+    protected class DummyException extends RuntimeException {
+        public DummyException(String message) {
+            super(message);
+        }
     }
 
 }

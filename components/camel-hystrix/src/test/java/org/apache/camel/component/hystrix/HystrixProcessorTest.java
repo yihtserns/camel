@@ -226,10 +226,4 @@ public class HystrixProcessorTest extends AbstractHystrixTest {
         assertEquals("Hello World 0", exchange.getIn().getBody());
     }
 
-    private class DummyException extends RuntimeException {
-        public DummyException(String message) {
-            super(message);
-        }
-    }
-
 }
