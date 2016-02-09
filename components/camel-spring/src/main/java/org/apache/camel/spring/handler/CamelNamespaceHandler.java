@@ -383,7 +383,7 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                         }
                         if (FromDefinition.class.isAssignableFrom(beanClass)
                                 || SendDefinition.class.isAssignableFrom(beanClass)) {
-                            registerEndpoint(element, parserContext, camelContextId);
+                            registerEndpoint(element);
                         }
 
                         return bean.getBeanDefinition();
@@ -397,6 +397,17 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                         }
 
                         return namespaces;
+                    }
+
+                    private void registerEndpoint(Element element) {
+                        String id = element.getAttribute("id");
+                        // must have an id to be registered
+                        if (ObjectHelper.isNotEmpty(id)) {
+                            AbstractBeanDefinition definition = (AbstractBeanDefinition) endpointParser.parse(element, parserContext);
+                            definition.getPropertyValues().addPropertyValue("camelContext", new RuntimeBeanReference(camelContextId));
+                            definition.setDependsOn(camelContextId);
+                            parserContext.registerBeanComponent(new BeanComponentDefinition(definition, id));
+                        }
                     }
                 });
                 MutablePropertyValues pvs = bd.getPropertyValues();
@@ -608,16 +619,4 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
             parserContext.getRegistry().removeBeanDefinition(id);
         }
     }
-
-    private void registerEndpoint(Element childElement, ParserContext parserContext, String contextId) {
-        String id = childElement.getAttribute("id");
-        // must have an id to be registered
-        if (ObjectHelper.isNotEmpty(id)) {
-            AbstractBeanDefinition definition = (AbstractBeanDefinition) endpointParser.parse(childElement, parserContext);
-            definition.getPropertyValues().addPropertyValue("camelContext", new RuntimeBeanReference(contextId));
-            definition.setDependsOn(contextId);
-            parserContext.registerBeanComponent(new BeanComponentDefinition(definition, id));
-        }
-    }
-
 }
