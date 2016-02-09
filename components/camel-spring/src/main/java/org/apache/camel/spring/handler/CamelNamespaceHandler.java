@@ -27,6 +27,7 @@ import java.util.Set;
 import javax.xml.bind.Binder;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
+import org.apache.camel.CamelContextAware;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -393,6 +394,9 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                                     element2Namespaces.put(element, namespaces);
                                 }
                                 bean.addPropertyValue("namespaces", namespaces.getNamespaces());
+                            }
+                            if (CamelContextAware.class.isAssignableFrom(beanClass)) {
+                                bean.addPropertyReference("camelContext", camelContextId);
                             }
                             if (FromDefinition.class.isAssignableFrom(beanClass)
                                     || SendDefinition.class.isAssignableFrom(beanClass)) {
