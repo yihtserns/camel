@@ -16,6 +16,7 @@
  */
 package org.apache.camel.spring.handler;
 
+import com.github.yihtserns.jaxbean.unmarshaller.api.SpringBeanHandler;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -59,11 +60,13 @@ import org.apache.camel.util.spring.SSLContextParametersFactoryBean;
 import org.apache.camel.util.spring.SecureRandomParametersFactoryBean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.MutablePropertyValues;
 import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.beans.factory.BeanDefinitionStoreException;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.beans.factory.parsing.BeanComponentDefinition;
+import org.springframework.beans.factory.support.AbstractBeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.xml.NamespaceHandlerSupport;
 import org.springframework.beans.factory.xml.ParserContext;
@@ -78,7 +81,7 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
     protected BeanDefinitionParser beanPostProcessorParser = new BeanDefinitionParser(CamelBeanPostProcessor.class, false);
     protected Set<String> parserElementNames = new HashSet<String>();
     protected Map<String, BeanDefinitionParser> parserMap = new HashMap<String, BeanDefinitionParser>();
-    
+
     private JAXBContext jaxbContext;
     private Map<String, BeanDefinition> autoRegisterMap = new HashMap<String, BeanDefinition>();
 
@@ -169,7 +172,7 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
         }
         if (osgi) {
             LOG.info("OSGi environment detected.");
-        } 
+        }
         LOG.debug("Using {} as CamelContextBeanDefinitionParser", cl.getCanonicalName());
         registerParser("camelContext", new CamelContextBeanDefinitionParser(cl));
     }
@@ -201,7 +204,7 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
         }
         return jaxbContext;
     }
-    
+
     protected class SSLContextParametersFactoryBeanBeanDefinitionParser extends BeanDefinitionParser {
 
         public SSLContextParametersFactoryBeanBeanDefinitionParser() {
@@ -212,7 +215,7 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
         protected void doParse(Element element, ParserContext parserContext, BeanDefinitionBuilder builder) {
             doBeforeParse(element);
             super.doParse(element, builder);
-            
+
             // Note: prefer to use doParse from parent and postProcess; however, parseUsingJaxb requires 
             // parserContext for no apparent reason.
             Binder<Node> binder;
@@ -221,12 +224,12 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
             } catch (JAXBException e) {
                 throw new BeanDefinitionStoreException("Failed to create the JAXB binder", e);
             }
-            
+
             Object value = parseUsingJaxb(element, parserContext, binder);
-            
+
             if (value instanceof SSLContextParametersFactoryBean) {
                 SSLContextParametersFactoryBean bean = (SSLContextParametersFactoryBean)value;
-                
+
                 builder.addPropertyValue("cipherSuites", bean.getCipherSuites());
                 builder.addPropertyValue("cipherSuitesFilter", bean.getCipherSuitesFilter());
                 builder.addPropertyValue("secureSocketProtocols", bean.getSecureSocketProtocols());
@@ -234,7 +237,7 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                 builder.addPropertyValue("keyManagers", bean.getKeyManagers());
                 builder.addPropertyValue("trustManagers", bean.getTrustManagers());
                 builder.addPropertyValue("secureRandom", bean.getSecureRandom());
-                
+
                 builder.addPropertyValue("clientParameters", bean.getClientParameters());
                 builder.addPropertyValue("serverParameters", bean.getServerParameters());
             } else {
@@ -367,31 +370,42 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
             if (value instanceof CamelContextFactoryBean) {
                 // set the property value with the JAXB parsed value
                 CamelContextFactoryBean factoryBean = (CamelContextFactoryBean) value;
+
+                try {
+                    BeanDefinition bd = (BeanDefinition) Unmarshaller.INSTANCE.unmarshal(element, new SpringBeanHandler() {
+
+                        private Map<Element, Namespaces> element2Namespaces = new HashMap<Element, Namespaces>();
+
+                        @Override
+                        public Object postProcess(BeanDefinitionBuilder bean) {
+                            AbstractBeanDefinition rawBd = bean.getRawBeanDefinition();
+                            Class<?> beanClass = rawBd.getBeanClass();
+                            if (NamespaceAware.class.isAssignableFrom(beanClass)) {
+                                Element element = (Element) rawBd.getSource();
+                                Element parentElement = (Element) element.getParentNode();
+                                Namespaces namespaces = element2Namespaces.get(parentElement);
+                                if (namespaces == null) {
+                                    namespaces = new Namespaces(element);
+                                    element2Namespaces.put(element, namespaces);
+                                }
+                                bean.addPropertyValue("namespaces", namespaces.getNamespaces());
+                            }
+
+                            return bean.getBeanDefinition();
+                        }
+
+                    });
+                    MutablePropertyValues pvs = bd.getPropertyValues();
+                    pvs.removePropertyValue("beans");
+                    pvs.removePropertyValue("redeliveryPolicies");
+                    pvs.removePropertyValue("endpoints");
+                    pvs.removePropertyValue("threadPools");
+                    builder.getRawBeanDefinition().setPropertyValues(pvs);
+                } catch (Exception ex) {
+                    throw new RuntimeException(ex);
+                }
                 builder.addPropertyValue("id", contextId);
                 builder.addPropertyValue("implicitId", implicitId);
-                builder.addPropertyValue("restConfiguration", factoryBean.getRestConfiguration());
-                builder.addPropertyValue("rests", factoryBean.getRests());
-                builder.addPropertyValue("routes", factoryBean.getRoutes());
-                builder.addPropertyValue("intercepts", factoryBean.getIntercepts());
-                builder.addPropertyValue("interceptFroms", factoryBean.getInterceptFroms());
-                builder.addPropertyValue("interceptSendToEndpoints", factoryBean.getInterceptSendToEndpoints());
-                builder.addPropertyValue("dataFormats", factoryBean.getDataFormats());
-                builder.addPropertyValue("onCompletions", factoryBean.getOnCompletions());
-                builder.addPropertyValue("onExceptions", factoryBean.getOnExceptions());
-                builder.addPropertyValue("builderRefs", factoryBean.getBuilderRefs());
-                builder.addPropertyValue("routeRefs", factoryBean.getRouteRefs());
-                builder.addPropertyValue("restRefs", factoryBean.getRestRefs());
-                builder.addPropertyValue("properties", factoryBean.getProperties());
-                builder.addPropertyValue("packageScan", factoryBean.getPackageScan());
-                builder.addPropertyValue("contextScan", factoryBean.getContextScan());
-                if (factoryBean.getPackages().length > 0) {
-                    builder.addPropertyValue("packages", factoryBean.getPackages());
-                }
-                builder.addPropertyValue("camelPropertyPlaceholder", factoryBean.getCamelPropertyPlaceholder());
-                builder.addPropertyValue("camelJMXAgent", factoryBean.getCamelJMXAgent());
-                builder.addPropertyValue("camelStreamCachingStrategy", factoryBean.getCamelStreamCachingStrategy());
-                builder.addPropertyValue("threadPoolProfiles", factoryBean.getThreadPoolProfiles());
-                // add any depends-on
                 addDependsOn(factoryBean, builder);
             }
 
@@ -430,9 +444,6 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
 
             // register templates if not already defined
             registerTemplates(element, parserContext, contextId);
-
-            // lets inject the namespaces into any namespace aware POJOs
-            injectNamespaces(element, binder);
 
             // inject bean post processor so we can support @Produce etc.
             // no bean processor element so lets create it by our self

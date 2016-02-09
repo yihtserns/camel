@@ -23,7 +23,6 @@ import org.apache.camel.Produce;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.spring.SpringRunWithTestSupport;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
@@ -50,7 +49,6 @@ public class SimpleLanguageWithSprinPropertyPlaceholderRouteTest extends SpringR
         assertFileExists("target/outBoxSimple/");
     }
     
-    @Ignore(value = "disabled because of https://jira.springsource.org/browse/SPR-7593")
     @Test
     @DirtiesContext
     public void replaceExpression() throws Exception {

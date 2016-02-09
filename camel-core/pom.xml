@@ -29,6 +29,7 @@
   <artifactId>camel-core</artifactId>
   <packaging>bundle</packaging>
   <name>Camel :: Core</name>
+    <version>2.16.0.placeholder-SNAPSHOT</version>
   <description>The Core Camel Java DSL based router</description>
 
   <properties>
@@ -116,7 +117,7 @@
     <dependency>
       <groupId>org.apache.camel</groupId>
       <artifactId>spi-annotations</artifactId>
-      <version>${project.version}</version>
+      <version>${project.parent.version}</version>
       <optional>true</optional>
     </dependency>
 
@@ -195,7 +196,7 @@
                                 <pluginExecutionFilter>
                                     <groupId>org.apache.camel</groupId>
                                     <artifactId>camel-package-maven-plugin</artifactId>
-                                    <versionRange>${project.version}</versionRange>
+                                    <versionRange>${project.parent.version}</versionRange>
                                     <goals>
                                         <goal>generate-eips-list</goal>
                                     </goals>
@@ -280,7 +281,7 @@
       <plugin>
         <groupId>org.apache.camel</groupId>
         <artifactId>camel-package-maven-plugin</artifactId>
-        <version>${project.version}</version>
+        <version>${project.parent.version}</version>
         <executions>
           <execution>
             <id>components</id>
@@ -494,7 +495,7 @@
         <dependency>
           <groupId>org.apache.camel</groupId>
           <artifactId>apt</artifactId>
-          <version>${project.version}</version>
+          <version>${project.parent.version}</version>
           <scope>provided</scope>
         </dependency>
       </dependencies>
