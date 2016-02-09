@@ -70,6 +70,7 @@ import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.beans.factory.parsing.BeanComponentDefinition;
 import org.springframework.beans.factory.support.AbstractBeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
+import static org.springframework.beans.factory.xml.BeanDefinitionParserDelegate.MULTI_VALUE_ATTRIBUTE_DELIMITERS;
 import org.springframework.beans.factory.xml.NamespaceHandlerSupport;
 import org.springframework.beans.factory.xml.ParserContext;
 import org.springframework.util.StringUtils;
@@ -220,7 +221,7 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
             doBeforeParse(element);
             super.doParse(element, builder);
 
-            // Note: prefer to use doParse from parent and postProcess; however, parseUsingJaxb requires 
+            // Note: prefer to use doParse from parent and postProcess; however, parseUsingJaxb requires
             // parserContext for no apparent reason.
             Binder<Node> binder;
             try {
@@ -362,79 +363,72 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                 implicitId = true;
             }
 
-            // now lets parse the routes with JAXB
-            Binder<Node> binder;
             try {
-                binder = getJaxbContext().createBinder();
-            } catch (JAXBException e) {
-                throw new BeanDefinitionStoreException("Failed to create the JAXB binder", e);
-            }
-            Object value = parseUsingJaxb(element, parserContext, binder);
+                final String camelContextId = contextId;
+                BeanDefinition bd = (BeanDefinition) Unmarshaller.INSTANCE.unmarshal(element, new SpringBeanHandler() {
 
-            if (value instanceof CamelContextFactoryBean) {
-                // set the property value with the JAXB parsed value
-                CamelContextFactoryBean factoryBean = (CamelContextFactoryBean) value;
+                    private Map<Element, Namespaces> element2Namespaces = new HashMap<Element, Namespaces>();
 
-                try {
-                    final String camelContextId = contextId;
-                    BeanDefinition bd = (BeanDefinition) Unmarshaller.INSTANCE.unmarshal(element, new SpringBeanHandler() {
-
-                        private Map<Element, Namespaces> element2Namespaces = new HashMap<Element, Namespaces>();
-
-                        @Override
-                        public Object postProcess(BeanDefinitionBuilder bean) {
-                            AbstractBeanDefinition rawBd = bean.getRawBeanDefinition();
-                            Class<?> beanClass = rawBd.getBeanClass();
-                            Element element = (Element) rawBd.getSource();
-                            if (NamespaceAware.class.isAssignableFrom(beanClass)) {
-                                Namespaces namespaces = getOrGenerateNamespaces((Element) element.getParentNode());
-                                bean.addPropertyValue("namespaces", namespaces.getNamespaces());
-                            }
-                            if (CamelContextAware.class.isAssignableFrom(beanClass)) {
-                                bean.addPropertyReference("camelContext", camelContextId);
-                            }
-                            if (FromDefinition.class.isAssignableFrom(beanClass)
-                                    || SendDefinition.class.isAssignableFrom(beanClass)) {
-                                registerEndpoint(element, parserContext, camelContextId);
-                            }
-
-                            return bean.getBeanDefinition();
+                    @Override
+                    public Object postProcess(BeanDefinitionBuilder bean) {
+                        AbstractBeanDefinition rawBd = bean.getRawBeanDefinition();
+                        Class<?> beanClass = rawBd.getBeanClass();
+                        Element element = (Element) rawBd.getSource();
+                        if (NamespaceAware.class.isAssignableFrom(beanClass)) {
+                            Namespaces namespaces = getOrGenerateNamespaces((Element) element.getParentNode());
+                            bean.addPropertyValue("namespaces", namespaces.getNamespaces());
+                        }
+                        if (CamelContextAware.class.isAssignableFrom(beanClass)) {
+                            bean.addPropertyReference("camelContext", camelContextId);
+                        }
+                        if (FromDefinition.class.isAssignableFrom(beanClass)
+                                || SendDefinition.class.isAssignableFrom(beanClass)) {
+                            registerEndpoint(element, parserContext, camelContextId);
                         }
 
-                        private Namespaces getOrGenerateNamespaces(Element element) {
-                            Namespaces namespaces = element2Namespaces.get(element);
-                            if (namespaces == null) {
-                                namespaces = new Namespaces(element);
-                                element2Namespaces.put(element, namespaces);
-                            }
-                            return namespaces;
-                        }
-                    });
-                    MutablePropertyValues pvs = bd.getPropertyValues();
-                    {
-                        if (pvs.contains("endpoints")) {
-                            List<BeanDefinition> endpointBeanDefs = (List) pvs.get("endpoints");
-                            for (BeanDefinition endpointBeanDef : endpointBeanDefs) {
-                                String id = (String) endpointBeanDef.getPropertyValues().get("id");
-                                if (StringUtils.isEmpty(id)) {
-                                    continue;
-                                }
-                                parserContext.registerBeanComponent(new BeanComponentDefinition(endpointBeanDef, id));
-                            }
-                        }
-                        pvs.removePropertyValue("endpoints");
+                        return bean.getBeanDefinition();
                     }
-                    pvs.removePropertyValue("beans");
-                    pvs.removePropertyValue("redeliveryPolicies");
-                    pvs.removePropertyValue("threadPools");
-                    builder.getRawBeanDefinition().setPropertyValues(pvs);
-                } catch (Exception ex) {
-                    throw new RuntimeException(ex);
+
+                    private Namespaces getOrGenerateNamespaces(Element element) {
+                        Namespaces namespaces = element2Namespaces.get(element);
+                        if (namespaces == null) {
+                            namespaces = new Namespaces(element);
+                            element2Namespaces.put(element, namespaces);
+                        }
+
+                        return namespaces;
+                    }
+                });
+                MutablePropertyValues pvs = bd.getPropertyValues();
+                {
+                    if (pvs.contains("endpoints")) {
+                        List<BeanDefinition> endpointBeanDefs = (List) pvs.get("endpoints");
+                        for (BeanDefinition endpointBeanDef : endpointBeanDefs) {
+                            String id = (String) endpointBeanDef.getPropertyValues().get("id");
+                            if (StringUtils.isEmpty(id)) {
+                                continue;
+                            }
+                            parserContext.registerBeanComponent(new BeanComponentDefinition(endpointBeanDef, id));
+                        }
+                    }
                 }
-                builder.addPropertyValue("id", contextId);
-                builder.addPropertyValue("implicitId", implicitId);
-                addDependsOn(factoryBean, builder);
+                {
+                    if (pvs.contains("dependsOn")) {
+                        String dependsOn = (String) pvs.get("dependsOn");
+                        builder.getRawBeanDefinition().setDependsOn(
+                                StringUtils.tokenizeToStringArray(dependsOn, MULTI_VALUE_ATTRIBUTE_DELIMITERS));
+                    }
+                }
+                pvs.removePropertyValue("endpoints");
+                pvs.removePropertyValue("beans");
+                pvs.removePropertyValue("redeliveryPolicies");
+                pvs.removePropertyValue("threadPools");
+                builder.getRawBeanDefinition().setPropertyValues(pvs);
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
             }
+            builder.addPropertyValue("id", contextId);
+            builder.addPropertyValue("implicitId", implicitId);
 
             NodeList list = element.getChildNodes();
             int size = list.getLength();
@@ -472,23 +466,6 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
             // inject bean post processor so we can support @Produce etc.
             // no bean processor element so lets create it by our self
             injectBeanPostProcessor(element, parserContext, contextId, builder);
-        }
-    }
-
-    protected void addDependsOn(CamelContextFactoryBean factoryBean, BeanDefinitionBuilder builder) {
-        String dependsOn = factoryBean.getDependsOn();
-        if (ObjectHelper.isNotEmpty(dependsOn)) {
-            // comma, whitespace and semi colon is valid separators in Spring depends-on
-            String[] depends = dependsOn.split(",|;|\\s");
-            if (depends == null) {
-                throw new IllegalArgumentException("Cannot separate depends-on, was: " + dependsOn);
-            } else {
-                for (String depend : depends) {
-                    depend = depend.trim();
-                    LOG.debug("Adding dependsOn {} to CamelContext({})", depend, factoryBean.getId());
-                    builder.addDependsOn(depend);
-                }
-            }
         }
     }
 
