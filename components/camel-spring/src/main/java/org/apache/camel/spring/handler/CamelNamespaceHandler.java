@@ -75,6 +75,7 @@ import org.springframework.beans.factory.xml.ParserContext;
  * Camel namespace for the spring XML configuration file.
  */
 public class CamelNamespaceHandler extends NamespaceHandlerSupport {
+
     private static final String SPRING_NS = "http://camel.apache.org/schema/spring";
     private static final Logger LOG = LoggerFactory.getLogger(CamelNamespaceHandler.class);
     protected BeanDefinitionParser endpointParser = new EndpointDefinitionParser();
@@ -228,7 +229,7 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
             Object value = parseUsingJaxb(element, parserContext, binder);
 
             if (value instanceof SSLContextParametersFactoryBean) {
-                SSLContextParametersFactoryBean bean = (SSLContextParametersFactoryBean)value;
+                SSLContextParametersFactoryBean bean = (SSLContextParametersFactoryBean) value;
 
                 builder.addPropertyValue("cipherSuites", bean.getCipherSuites());
                 builder.addPropertyValue("cipherSuitesFilter", bean.getCipherSuitesFilter());
@@ -242,8 +243,8 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                 builder.addPropertyValue("serverParameters", bean.getServerParameters());
             } else {
                 throw new BeanDefinitionStoreException("Parsed type is not of the expected type. Expected "
-                                                       + SSLContextParametersFactoryBean.class.getName() + " but found "
-                                                       + value.getClass().getName());
+                        + SSLContextParametersFactoryBean.class.getName() + " but found "
+                        + value.getClass().getName());
             }
         }
     }
@@ -342,7 +343,7 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
         }
 
         @Override
-        protected void doParse(Element element, ParserContext parserContext, BeanDefinitionBuilder builder) {
+        protected void doParse(Element element, final ParserContext parserContext, BeanDefinitionBuilder builder) {
             doBeforeParse(element);
             super.doParse(element, parserContext, builder);
 
@@ -372,6 +373,7 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                 CamelContextFactoryBean factoryBean = (CamelContextFactoryBean) value;
 
                 try {
+                    final String camelContextId = contextId;
                     BeanDefinition bd = (BeanDefinition) Unmarshaller.INSTANCE.unmarshal(element, new SpringBeanHandler() {
 
                         private Map<Element, Namespaces> element2Namespaces = new HashMap<Element, Namespaces>();
@@ -380,8 +382,8 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                         public Object postProcess(BeanDefinitionBuilder bean) {
                             AbstractBeanDefinition rawBd = bean.getRawBeanDefinition();
                             Class<?> beanClass = rawBd.getBeanClass();
+                            Element element = (Element) rawBd.getSource();
                             if (NamespaceAware.class.isAssignableFrom(beanClass)) {
-                                Element element = (Element) rawBd.getSource();
                                 Element parentElement = (Element) element.getParentNode();
                                 Namespaces namespaces = element2Namespaces.get(parentElement);
                                 if (namespaces == null) {
@@ -389,6 +391,10 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                                     element2Namespaces.put(element, namespaces);
                                 }
                                 bean.addPropertyValue("namespaces", namespaces.getNamespaces());
+                            }
+                            if (FromDefinition.class.isAssignableFrom(beanClass)
+                                    || SendDefinition.class.isAssignableFrom(beanClass)) {
+                                registerEndpoint(element, parserContext, camelContextId);
                             }
 
                             return bean.getBeanDefinition();
@@ -439,9 +445,6 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                 }
             }
 
-            // register as endpoint defined indirectly in the routes by from/to types having id explicit set
-            registerEndpointsWithIdsDefinedInFromOrToTypes(element, parserContext, contextId, binder);
-
             // register templates if not already defined
             registerTemplates(element, parserContext, contextId);
 
@@ -476,7 +479,7 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
             try {
                 BeanDefinition definition = parserContext.getRegistry().getBeanDefinition(routeBuilderName);
                 Method getDependsOn = definition.getClass().getMethod("getDependsOn", new Class[]{});
-                String[] dependsOn = (String[])getDependsOn.invoke(definition);
+                String[] dependsOn = (String[]) getDependsOn.invoke(definition);
                 if (dependsOn == null || dependsOn.length == 0) {
                     dependsOn = new String[]{contextId};
                 } else {
@@ -486,7 +489,7 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                     dependsOn = temp;
                 }
                 Method method = definition.getClass().getMethod("setDependsOn", String[].class);
-                method.invoke(definition, (Object)dependsOn);
+                method.invoke(definition, (Object) dependsOn);
             } catch (Exception e) {
                 // Do nothing here
             }
@@ -526,27 +529,6 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
         // see more at CAMEL-1663
         definition.getPropertyValues().addPropertyValue("camelId", contextId);
         builder.addPropertyReference("beanPostProcessor", beanPostProcessorId);
-    }
-
-    /**
-     * Used for auto registering endpoints from the <tt>from</tt> or <tt>to</tt> DSL if they have an id attribute set
-     */
-    protected void registerEndpointsWithIdsDefinedInFromOrToTypes(Element element, ParserContext parserContext, String contextId, Binder<Node> binder) {
-        NodeList list = element.getChildNodes();
-        int size = list.getLength();
-        for (int i = 0; i < size; i++) {
-            Node child = list.item(i);
-            if (child instanceof Element) {
-                Element childElement = (Element) child;
-                Object object = binder.getJAXBNode(child);
-                // we only want from/to types to be registered as endpoints
-                if (object instanceof FromDefinition || object instanceof SendDefinition) {
-                    registerEndpoint(childElement, parserContext, contextId);
-                }
-                // recursive
-                registerEndpointsWithIdsDefinedInFromOrToTypes(childElement, parserContext, contextId, binder);
-            }
-        }
     }
 
     /**
