@@ -441,10 +441,6 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                 if (localName.equals("endpoint")) {
                     continue;
                 }
-                if (localName.equals("routeBuilder")) {
-                    addDependsOnToRouteBuilder(childElement, parserContext, contextId);
-                    continue;
-                }
                 BeanDefinitionParser parser = parserMap.get(localName);
                 if (parser == null) {
                     continue;
@@ -485,31 +481,6 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                     LOG.debug("Adding dependsOn {} to CamelContext({})", depend, factoryBean.getId());
                     builder.addDependsOn(depend);
                 }
-            }
-        }
-    }
-
-    private void addDependsOnToRouteBuilder(Element childElement, ParserContext parserContext, String contextId) {
-        // setting the depends-on explicitly is required since Spring 3.0
-        String routeBuilderName = childElement.getAttribute("ref");
-        if (ObjectHelper.isNotEmpty(routeBuilderName)) {
-            // set depends-on to the context for a routeBuilder bean
-            try {
-                BeanDefinition definition = parserContext.getRegistry().getBeanDefinition(routeBuilderName);
-                Method getDependsOn = definition.getClass().getMethod("getDependsOn", new Class[]{});
-                String[] dependsOn = (String[]) getDependsOn.invoke(definition);
-                if (dependsOn == null || dependsOn.length == 0) {
-                    dependsOn = new String[]{contextId};
-                } else {
-                    String[] temp = new String[dependsOn.length + 1];
-                    System.arraycopy(dependsOn, 0, temp, 0, dependsOn.length);
-                    temp[dependsOn.length] = contextId;
-                    dependsOn = temp;
-                }
-                Method method = definition.getClass().getMethod("setDependsOn", String[].class);
-                method.invoke(definition, (Object) dependsOn);
-            } catch (Exception e) {
-                // Do nothing here
             }
         }
     }
