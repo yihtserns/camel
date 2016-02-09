@@ -425,7 +425,9 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                 pvs.removePropertyValue("threadPools");
                 builder.getRawBeanDefinition().setPropertyValues(pvs);
             } catch (Exception ex) {
-                throw new RuntimeException(ex);
+                String msg = String.format("Unable to unmarshal <%s/>", element.getLocalName());
+                parserContext.getReaderContext().fatal(msg, element, ex);
+                return;
             }
             builder.addPropertyValue("id", contextId);
             builder.addPropertyValue("implicitId", implicitId);
