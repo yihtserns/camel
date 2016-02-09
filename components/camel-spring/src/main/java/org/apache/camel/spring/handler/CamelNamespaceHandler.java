@@ -387,12 +387,7 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                             Class<?> beanClass = rawBd.getBeanClass();
                             Element element = (Element) rawBd.getSource();
                             if (NamespaceAware.class.isAssignableFrom(beanClass)) {
-                                Element parentElement = (Element) element.getParentNode();
-                                Namespaces namespaces = element2Namespaces.get(parentElement);
-                                if (namespaces == null) {
-                                    namespaces = new Namespaces(element);
-                                    element2Namespaces.put(element, namespaces);
-                                }
+                                Namespaces namespaces = getOrGenerateNamespaces((Element) element.getParentNode());
                                 bean.addPropertyValue("namespaces", namespaces.getNamespaces());
                             }
                             if (CamelContextAware.class.isAssignableFrom(beanClass)) {
@@ -406,6 +401,14 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                             return bean.getBeanDefinition();
                         }
 
+                        private Namespaces getOrGenerateNamespaces(Element element) {
+                            Namespaces namespaces = element2Namespaces.get(element);
+                            if (namespaces == null) {
+                                namespaces = new Namespaces(element);
+                                element2Namespaces.put(element, namespaces);
+                            }
+                            return namespaces;
+                        }
                     });
                     MutablePropertyValues pvs = bd.getPropertyValues();
                     {
