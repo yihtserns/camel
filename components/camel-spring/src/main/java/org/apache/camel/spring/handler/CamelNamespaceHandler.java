@@ -20,6 +20,7 @@ import com.github.yihtserns.jaxbean.unmarshaller.api.SpringBeanHandler;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -70,6 +71,7 @@ import org.springframework.beans.factory.support.AbstractBeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.xml.NamespaceHandlerSupport;
 import org.springframework.beans.factory.xml.ParserContext;
+import org.springframework.util.StringUtils;
 
 /**
  * Camel namespace for the spring XML configuration file.
@@ -402,9 +404,21 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
 
                     });
                     MutablePropertyValues pvs = bd.getPropertyValues();
+                    {
+                        if (pvs.contains("endpoints")) {
+                            List<BeanDefinition> endpointBeanDefs = (List) pvs.get("endpoints");
+                            for (BeanDefinition endpointBeanDef : endpointBeanDefs) {
+                                String id = (String) endpointBeanDef.getPropertyValues().get("id");
+                                if (StringUtils.isEmpty(id)) {
+                                    continue;
+                                }
+                                parserContext.registerBeanComponent(new BeanComponentDefinition(endpointBeanDef, id));
+                            }
+                        }
+                        pvs.removePropertyValue("endpoints");
+                    }
                     pvs.removePropertyValue("beans");
                     pvs.removePropertyValue("redeliveryPolicies");
-                    pvs.removePropertyValue("endpoints");
                     pvs.removePropertyValue("threadPools");
                     builder.getRawBeanDefinition().setPropertyValues(pvs);
                 } catch (Exception ex) {
@@ -419,29 +433,33 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
             int size = list.getLength();
             for (int i = 0; i < size; i++) {
                 Node child = list.item(i);
-                if (child instanceof Element) {
-                    Element childElement = (Element) child;
-                    String localName = child.getLocalName();
-                    if (localName.equals("endpoint")) {
-                        registerEndpoint(childElement, parserContext, contextId);
-                    } else if (localName.equals("routeBuilder")) {
-                        addDependsOnToRouteBuilder(childElement, parserContext, contextId);
-                    } else {
-                        BeanDefinitionParser parser = parserMap.get(localName);
-                        if (parser != null) {
-                            BeanDefinition definition = parser.parse(childElement, parserContext);
-                            String id = childElement.getAttribute("id");
-                            if (ObjectHelper.isNotEmpty(id)) {
-                                parserContext.registerComponent(new BeanComponentDefinition(definition, id));
-                                // set the templates with the camel context
-                                if (localName.equals("template") || localName.equals("consumerTemplate")
-                                        || localName.equals("proxy") || localName.equals("export")) {
-                                    // set the camel context
-                                    definition.getPropertyValues().addPropertyValue("camelContext", new RuntimeBeanReference(contextId));
-                                }
-                            }
-                        }
-                    }
+                if (!(child instanceof Element)) {
+                    continue;
+                }
+                Element childElement = (Element) child;
+                String localName = child.getLocalName();
+                if (localName.equals("endpoint")) {
+                    continue;
+                }
+                if (localName.equals("routeBuilder")) {
+                    addDependsOnToRouteBuilder(childElement, parserContext, contextId);
+                    continue;
+                }
+                BeanDefinitionParser parser = parserMap.get(localName);
+                if (parser == null) {
+                    continue;
+                }
+                BeanDefinition definition = parser.parse(childElement, parserContext);
+                String id = childElement.getAttribute("id");
+                if (ObjectHelper.isEmpty(id)) {
+                    continue;
+                }
+                parserContext.registerComponent(new BeanComponentDefinition(definition, id));
+                // set the templates with the camel context
+                if (localName.equals("template") || localName.equals("consumerTemplate")
+                        || localName.equals("proxy") || localName.equals("export")) {
+                    // set the camel context
+                    definition.getPropertyValues().addPropertyValue("camelContext", new RuntimeBeanReference(contextId));
                 }
             }
 
