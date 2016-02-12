@@ -81,13 +81,12 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
         registerBeanDefinitionParser("routeContext", genericUnmarshallerParser);
         registerBeanDefinitionParser("endpoint", genericUnmarshallerParser);
         registerBeanDefinitionParser("sslContextParameters", genericUnmarshallerParser);
-
-        registerBeanDefinitionParserInMap("template", genericUnmarshallerParser);
-        registerBeanDefinitionParserInMap("consumerTemplate", genericUnmarshallerParser);
-        registerBeanDefinitionParserInMap("keyStoreParameters", genericUnmarshallerParser);
-        registerBeanDefinitionParserInMap("secureRandomParameters", genericUnmarshallerParser);
-        registerBeanDefinitionParserInMap("threadPool", genericUnmarshallerParser);
-        registerBeanDefinitionParserInMap("redeliveryPolicyProfile", genericUnmarshallerParser);
+        registerBeanDefinitionParser("template", genericUnmarshallerParser);
+        registerBeanDefinitionParser("consumerTemplate", genericUnmarshallerParser);
+        registerBeanDefinitionParser("threadPool", genericUnmarshallerParser);
+        registerBeanDefinitionParser("redeliveryPolicyProfile", genericUnmarshallerParser);
+        registerBeanDefinitionParser("keyStoreParameters", genericUnmarshallerParser);
+        registerBeanDefinitionParser("secureRandomParameters", genericUnmarshallerParser);
 
         addBeanDefinitionParser("proxy", CamelProxyFactoryBean.class, true, false);
         addBeanDefinitionParser("export", CamelServiceExporter.class, true, false);
@@ -126,11 +125,6 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
         }
         LOG.debug("Using {} as CamelContextBeanDefinitionParser", cl.getCanonicalName());
         registerBeanDefinitionParser("camelContext", new CamelContextBeanDefinitionParser(cl));
-    }
-
-    private void registerBeanDefinitionParserInMap(String elementName, AbstractBeanDefinitionParser parser) {
-        registerBeanDefinitionParser(elementName, parser);
-        parserMap.put(elementName, parser);
     }
 
     private void addBeanDefinitionParser(String elementName, Class<?> type, boolean register, boolean assignId) {
