@@ -312,12 +312,6 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                     continue;
                 }
                 BeanDefinition definition = parser.parse(childElement, parserContext);
-                String id = childElement.getAttribute("id");
-                if (ObjectHelper.isEmpty(id)) {
-                    continue;
-                }
-                parserContext.registerComponent(new BeanComponentDefinition(definition, id));
-                // set the templates with the camel context
                 if (localName.equals("proxy") || localName.equals("export")) {
                     // set the camel context
                     definition.getPropertyValues().addPropertyValue("camelContext", new RuntimeBeanReference(contextId));
