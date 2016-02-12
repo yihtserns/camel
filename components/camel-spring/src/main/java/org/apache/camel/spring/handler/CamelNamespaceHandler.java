@@ -67,7 +67,6 @@ import org.w3c.dom.Attr;
 public class CamelNamespaceHandler extends NamespaceHandlerSupport {
 
     private static final Logger LOG = LoggerFactory.getLogger(CamelNamespaceHandler.class);
-    private BeanDefinitionParser beanPostProcessorParser = new BeanDefinitionParser(CamelBeanPostProcessor.class, false);
     private Map<String, AbstractBeanDefinitionParser> parserMap = new HashMap<String, AbstractBeanDefinitionParser>();
     private UnmarshallerParser genericUnmarshallerParser = UnmarshallerParser.create();
 
@@ -353,23 +352,18 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
 
             // inject bean post processor so we can support @Produce etc.
             // no bean processor element so lets create it by our self
-            injectBeanPostProcessor(element, parserContext, contextId, bd);
+            String camelPostProcessorId = contextId + ":beanPostProcessor";
+            BeanDefinition camelPostProcessor = BeanDefinitionBuilder.genericBeanDefinition(CamelBeanPostProcessor.class)
+                    // only register to camel context id as a String. Then we can look it up later
+                    // otherwise we get a circular reference in spring and it will not allow custom bean post processing
+                    // see more at CAMEL-1663
+                    .addPropertyValue("camelId", contextId)
+                    .setRole(BeanDefinition.ROLE_INFRASTRUCTURE)
+                    .getBeanDefinition();
+            parserContext.registerBeanComponent(new BeanComponentDefinition(camelPostProcessor, camelPostProcessorId));
+            bd.getPropertyValues().addPropertyValue("beanPostProcessor", new RuntimeBeanReference(camelPostProcessorId));
 
             return bd;
-        }
-
-        private void injectBeanPostProcessor(Element element, ParserContext parserContext, String contextId, AbstractBeanDefinition bean) {
-            Element childElement = element.getOwnerDocument().createElement("beanPostProcessor");
-            element.appendChild(childElement);
-
-            String beanPostProcessorId = contextId + ":beanPostProcessor";
-            childElement.setAttribute("id", beanPostProcessorId);
-            BeanDefinition definition = beanPostProcessorParser.parse(childElement, parserContext);
-            // only register to camel context id as a String. Then we can look it up later
-            // otherwise we get a circular reference in spring and it will not allow custom bean post processing
-            // see more at CAMEL-1663
-            definition.getPropertyValues().addPropertyValue("camelId", contextId);
-            bean.getPropertyValues().addPropertyValue("beanPostProcessor", new RuntimeBeanReference(beanPostProcessorId));
         }
 
         private class CamelContextBeanHandler implements BeanHandler<BeanDefinitionBuilder> {
