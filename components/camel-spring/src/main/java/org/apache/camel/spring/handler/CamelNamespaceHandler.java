@@ -45,16 +45,9 @@ import org.apache.camel.spring.CamelConsumerTemplateFactoryBean;
 import org.apache.camel.spring.CamelContextFactoryBean;
 import org.apache.camel.spring.CamelEndpointFactoryBean;
 import org.apache.camel.spring.CamelProducerTemplateFactoryBean;
-import org.apache.camel.spring.CamelRedeliveryPolicyFactoryBean;
-import org.apache.camel.spring.CamelRestContextFactoryBean;
-import org.apache.camel.spring.CamelRouteContextFactoryBean;
-import org.apache.camel.spring.CamelThreadPoolFactoryBean;
 import org.apache.camel.spring.remoting.CamelProxyFactoryBean;
 import org.apache.camel.spring.remoting.CamelServiceExporter;
 import org.apache.camel.util.ObjectHelper;
-import org.apache.camel.util.spring.KeyStoreParametersFactoryBean;
-import org.apache.camel.util.spring.SSLContextParametersFactoryBean;
-import org.apache.camel.util.spring.SecureRandomParametersFactoryBean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.MutablePropertyValues;
@@ -79,27 +72,25 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
 
     private static final Logger LOG = LoggerFactory.getLogger(CamelNamespaceHandler.class);
     private BeanDefinitionParser beanPostProcessorParser = new BeanDefinitionParser(CamelBeanPostProcessor.class, false);
-    private Map<String, BeanDefinitionParser> parserMap = new HashMap<String, BeanDefinitionParser>();
+    private Map<String, AbstractBeanDefinitionParser> parserMap = new HashMap<String, AbstractBeanDefinitionParser>();
     private Map<String, BeanDefinition> autoRegisterMap = new HashMap<String, BeanDefinition>();
+    private UnmarshallerParser genericUnmarshallerParser = UnmarshallerParser.create();
 
     public void init() {
-        // register restContext parser
-        registerBeanDefinitionParser("restContext", UnmarshallerParser.withoutIdAssigned(CamelRestContextFactoryBean.class));
-        // register routeContext parser
-        registerBeanDefinitionParser("routeContext", UnmarshallerParser.withoutIdAssigned(CamelRouteContextFactoryBean.class));
-        // register endpoint parser
-        registerBeanDefinitionParser("endpoint", UnmarshallerParser.withoutIdAssigned(CamelEndpointFactoryBean.class));
+        registerBeanDefinitionParser("restContext", genericUnmarshallerParser);
+        registerBeanDefinitionParser("routeContext", genericUnmarshallerParser);
+        registerBeanDefinitionParser("endpoint", genericUnmarshallerParser);
+        registerBeanDefinitionParser("sslContextParameters", genericUnmarshallerParser);
 
-        addBeanDefinitionParser("keyStoreParameters", KeyStoreParametersFactoryBean.class, true, true);
-        addBeanDefinitionParser("secureRandomParameters", SecureRandomParametersFactoryBean.class, true, true);
-        registerBeanDefinitionParser("sslContextParameters", UnmarshallerParser.withIdAssigned(SSLContextParametersFactoryBean.class));
+        registerBeanDefinitionParserInMap("template", genericUnmarshallerParser);
+        registerBeanDefinitionParserInMap("consumerTemplate", genericUnmarshallerParser);
+        registerBeanDefinitionParserInMap("keyStoreParameters", genericUnmarshallerParser);
+        registerBeanDefinitionParserInMap("secureRandomParameters", genericUnmarshallerParser);
+        registerBeanDefinitionParserInMap("threadPool", genericUnmarshallerParser);
+        registerBeanDefinitionParserInMap("redeliveryPolicyProfile", genericUnmarshallerParser);
 
         addBeanDefinitionParser("proxy", CamelProxyFactoryBean.class, true, false);
-        addBeanDefinitionParser("template", CamelProducerTemplateFactoryBean.class, true, false);
-        addBeanDefinitionParser("consumerTemplate", CamelConsumerTemplateFactoryBean.class, true, false);
         addBeanDefinitionParser("export", CamelServiceExporter.class, true, false);
-        addBeanDefinitionParser("threadPool", CamelThreadPoolFactoryBean.class, true, true);
-        addBeanDefinitionParser("redeliveryPolicyProfile", CamelRedeliveryPolicyFactoryBean.class, true, true);
 
         // jmx agent, stream caching, and property placeholder cannot be used outside of the camel context
         addBeanDefinitionParser("jmxAgent", CamelJMXAgentDefinition.class, false, false);
@@ -135,6 +126,11 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
         }
         LOG.debug("Using {} as CamelContextBeanDefinitionParser", cl.getCanonicalName());
         registerBeanDefinitionParser("camelContext", new CamelContextBeanDefinitionParser(cl));
+    }
+
+    private void registerBeanDefinitionParserInMap(String elementName, AbstractBeanDefinitionParser parser) {
+        registerBeanDefinitionParser(elementName, parser);
+        parserMap.put(elementName, parser);
     }
 
     private void addBeanDefinitionParser(String elementName, Class<?> type, boolean register, boolean assignId) {
@@ -214,11 +210,7 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
             }
         }
 
-        public static UnmarshallerParser withIdAssigned(Class<?> beanClass) {
-            return new UnmarshallerParser();
-        }
-
-        public static UnmarshallerParser withoutIdAssigned(Class<?> beanClass) {
+        public static UnmarshallerParser create() {
             return new UnmarshallerParser();
         }
 
@@ -300,7 +292,7 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                 if (localName.equals("endpoint")) {
                     continue;
                 }
-                BeanDefinitionParser parser = parserMap.get(localName);
+                AbstractBeanDefinitionParser parser = parserMap.get(localName);
                 if (parser == null) {
                     continue;
                 }
@@ -380,10 +372,10 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                 if (!inUse || existing) {
                     String id = "template";
                     // auto create a template
-                    Element templateElement = element.getOwnerDocument().createElement("template");
-                    templateElement.setAttribute("id", id);
-                    BeanDefinitionParser parser = parserMap.get("template");
-                    BeanDefinition definition = parser.parse(templateElement, parserContext);
+                    BeanDefinition definition = BeanDefinitionBuilder.genericBeanDefinition(CamelProducerTemplateFactoryBean.class)
+                            .addPropertyValue("id", id)
+                            .getBeanDefinition();
+                    parserContext.registerBeanComponent(new BeanComponentDefinition(definition, id));
 
                     // auto register it
                     autoRegisterBeanDefinition(id, definition, parserContext, contextId);
@@ -406,10 +398,10 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                 if (!inUse || existing) {
                     String id = "consumerTemplate";
                     // auto create a template
-                    Element templateElement = element.getOwnerDocument().createElement("consumerTemplate");
-                    templateElement.setAttribute("id", id);
-                    BeanDefinitionParser parser = parserMap.get("consumerTemplate");
-                    BeanDefinition definition = parser.parse(templateElement, parserContext);
+                    BeanDefinition definition = BeanDefinitionBuilder.genericBeanDefinition(CamelConsumerTemplateFactoryBean.class)
+                            .addPropertyValue("id", id)
+                            .getBeanDefinition();
+                    parserContext.registerBeanComponent(new BeanComponentDefinition(definition, id));
 
                     // auto register it
                     autoRegisterBeanDefinition(id, definition, parserContext, contextId);
