@@ -220,6 +220,7 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
             final String autoRegistererBeanName = "camel.autoRegister";
             if (!parserContext.getRegistry().containsBeanDefinition(autoRegistererBeanName)) {
                 BeanDefinition autoRegistererDef = BeanDefinitionBuilder.genericBeanDefinition(ConsumerProducerTemplateAutoRegisterer.class)
+                        .setRole(BeanDefinition.ROLE_INFRASTRUCTURE)
                         .getBeanDefinition();
                 parserContext.registerBeanComponent(new BeanComponentDefinition(autoRegistererDef, autoRegistererBeanName));
             }
