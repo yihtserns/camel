@@ -278,6 +278,18 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                     }
                 }
                 {
+                    if (pvs.contains("threadPools")) {
+                        List<AbstractBeanDefinition> threadPoolDefs = (List) pvs.get("threadPools");
+                        for (AbstractBeanDefinition threadPoolDef : threadPoolDefs) {
+                            String id = (String) threadPoolDef.getPropertyValues().get("id");
+                            if (StringUtils.isEmpty(id)) {
+                                continue;
+                            }
+                            parserContext.registerBeanComponent(new BeanComponentDefinition(threadPoolDef, id));
+                        }
+                    }
+                }
+                {
                     if (pvs.contains("dependsOn")) {
                         String dependsOn = (String) pvs.get("dependsOn");
                         bd.setDependsOn(StringUtils.tokenizeToStringArray(dependsOn, MULTI_VALUE_ATTRIBUTE_DELIMITERS));
@@ -304,7 +316,8 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                 String localName = child.getLocalName();
                 if (localName.equals("endpoint")
                         || localName.equals("template")
-                        || localName.equals("consumerTemplate")) {
+                        || localName.equals("consumerTemplate")
+                        || localName.equals("threadPool")) {
                     continue;
                 }
                 AbstractBeanDefinitionParser parser = parserMap.get(localName);
