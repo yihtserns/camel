@@ -48,7 +48,6 @@ import org.apache.camel.util.ObjectHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.MutablePropertyValues;
-import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.beans.factory.parsing.BeanComponentDefinition;
@@ -70,7 +69,6 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
     private static final Logger LOG = LoggerFactory.getLogger(CamelNamespaceHandler.class);
     private BeanDefinitionParser beanPostProcessorParser = new BeanDefinitionParser(CamelBeanPostProcessor.class, false);
     private Map<String, AbstractBeanDefinitionParser> parserMap = new HashMap<String, AbstractBeanDefinitionParser>();
-    private Map<String, BeanDefinition> autoRegisterMap = new HashMap<String, BeanDefinition>();
     private UnmarshallerParser genericUnmarshallerParser = UnmarshallerParser.create();
 
     public void init() {
@@ -260,13 +258,26 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                 {
                     if (pvs.contains("beans")) {
                         List<AbstractBeanDefinition> beanDefs = (List) pvs.get("beans");
+                        boolean hasProducerTemplate = false;
+                        boolean hasConsumerTemplate = false;
                         for (AbstractBeanDefinition beanDef : beanDefs) {
                             Class<?> beanClass = beanDef.getBeanClass();
+                            hasProducerTemplate |= beanClass == CamelProducerTemplateFactoryBean.class;
+                            hasConsumerTemplate |= beanClass == CamelConsumerTemplateFactoryBean.class;
+
                             if (beanClass == CamelProducerTemplateFactoryBean.class
                                     || beanClass == CamelConsumerTemplateFactoryBean.class) {
                                 String id = (String) beanDef.getPropertyValues().get("id");
                                 parserContext.registerBeanComponent(new BeanComponentDefinition(beanDef, id));
                             }
+                        }
+
+                        if (hasProducerTemplate) {
+                            bd.setAttribute("hasProducerTemplate", true);
+                        }
+
+                        if (hasConsumerTemplate) {
+                            bd.setAttribute("hasConsumerTemplate", true);
                         }
                     }
                 }
@@ -340,9 +351,6 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                 }
             }
 
-            // register templates if not already defined
-            registerTemplates(element, bd);
-
             // inject bean post processor so we can support @Produce etc.
             // no bean processor element so lets create it by our self
             injectBeanPostProcessor(element, parserContext, contextId, bd);
@@ -362,83 +370,6 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
             // see more at CAMEL-1663
             definition.getPropertyValues().addPropertyValue("camelId", contextId);
             bean.getPropertyValues().addPropertyValue("beanPostProcessor", new RuntimeBeanReference(beanPostProcessorId));
-        }
-
-        /**
-         * Used for auto registering producer and consumer templates if not already defined in XML.
-         */
-        private void registerTemplates(Element element, BeanDefinition camelContextDef) {
-            boolean template = false;
-            boolean consumerTemplate = false;
-
-            NodeList list = element.getChildNodes();
-            int size = list.getLength();
-            for (int i = 0; i < size; i++) {
-                Node child = list.item(i);
-                if (child instanceof Element) {
-                    Element childElement = (Element) child;
-                    String localName = childElement.getLocalName();
-                    if ("template".equals(localName)) {
-                        template = true;
-                    } else if ("consumerTemplate".equals(localName)) {
-                        consumerTemplate = true;
-                    }
-                }
-            }
-
-            if (template) {
-                camelContextDef.setAttribute("hasProducerTemplate", true);
-            }
-
-            if (consumerTemplate) {
-                camelContextDef.setAttribute("hasConsumerTemplate", true);
-            }
-        }
-
-        private void autoRegisterBeanDefinitionIfNecesssary(String id, Class<?> beanClass, ParserContext parserContext, String contextId) {
-            // either we have not used template before or we have auto registered it already and therefore we
-            // need it to allow to do it so it can remove the existing auto registered as there is now a clash id
-            // since we have multiple camel contexts
-            // see if we have already auto registered this id
-            BeanDefinition existing = autoRegisterMap.get(id);
-            boolean inUse = false;
-            try {
-                inUse = parserContext.getRegistry().isBeanNameInUse(id);
-            } catch (BeanCreationException e) {
-                // Spring Eclipse Tooling may throw an exception when you edit the Spring XML online in Eclipse
-                // when the isBeanNameInUse method is invoked, so ignore this and continue (CAMEL-2739)
-                String msg = String.format("Error checking isBeanNameInUse(%s). This exception will be ignored", id);
-                LOG.debug(msg, e);
-            }
-            if (!inUse || (existing != null)) {
-                BeanDefinition definition = BeanDefinitionBuilder.genericBeanDefinition(beanClass)
-                        .addPropertyValue("id", id)
-                        .getBeanDefinition();
-                parserContext.registerBeanComponent(new BeanComponentDefinition(definition, id));
-
-                // it is a bit cumbersome to work with the spring bean definition parser
-                // as we kinda need to eagerly register the bean definition on the parser context
-                // and then later we might find out that we should not have done that in case we have multiple camel contexts
-                // that would have a id clash by auto registering the same bean definition with the same id such as a producer template
-                if (existing == null) {
-                    // no then add it to the map and register it
-                    autoRegisterMap.put(id, definition);
-
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug("Registered default: {} with id: {} on camel context: {}", new Object[]{definition.getBeanClassName(), id, contextId});
-                    }
-                } else {
-                    // ups we have already registered it before with same id, but on another camel context
-                    // this is not good so we need to remove all traces of this auto registering.
-                    // end user must manually add the needed XML elements and provide unique ids access all camel context himself.
-                    LOG.debug("Unregistered default: {} with id: {} as we have multiple camel contexts and they must use unique ids."
-                            + " You must define the definition in the XML file manually to avoid id clashes when using multiple camel contexts",
-                            beanClass.getName(), id);
-
-                    parserContext.getRegistry().removeBeanDefinition(id);
-                }
-            }
-
         }
 
         private class CamelContextBeanHandler implements BeanHandler<BeanDefinitionBuilder> {
