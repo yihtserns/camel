@@ -220,6 +220,13 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
 
         @Override
         protected AbstractBeanDefinition parseInternal(Element element, ParserContext parserContext) {
+            final String autoRegistererBeanName = "camel.autoRegister";
+            if (!parserContext.getRegistry().containsBeanDefinition(autoRegistererBeanName)) {
+                BeanDefinition autoRegistererDef = BeanDefinitionBuilder.genericBeanDefinition(ConsumerProducerTemplateAutoRegisterer.class)
+                        .getBeanDefinition();
+                parserContext.registerBeanComponent(new BeanComponentDefinition(autoRegistererDef, autoRegistererBeanName));
+            }
+
             String contextId = element.getAttribute("id");
             boolean implicitId = false;
 
@@ -334,7 +341,7 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
             }
 
             // register templates if not already defined
-            registerTemplates(element, parserContext, contextId);
+            registerTemplates(element, bd);
 
             // inject bean post processor so we can support @Produce etc.
             // no bean processor element so lets create it by our self
@@ -360,7 +367,7 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
         /**
          * Used for auto registering producer and consumer templates if not already defined in XML.
          */
-        private void registerTemplates(Element element, ParserContext parserContext, String contextId) {
+        private void registerTemplates(Element element, BeanDefinition camelContextDef) {
             boolean template = false;
             boolean consumerTemplate = false;
 
@@ -379,14 +386,12 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                 }
             }
 
-            if (!template) {
-                String id = "template";
-                autoRegisterBeanDefinitionIfNecesssary(id, CamelProducerTemplateFactoryBean.class, parserContext, contextId);
+            if (template) {
+                camelContextDef.setAttribute("hasProducerTemplate", true);
             }
 
-            if (!consumerTemplate) {
-                String id = "consumerTemplate";
-                autoRegisterBeanDefinitionIfNecesssary(id, CamelConsumerTemplateFactoryBean.class, parserContext, contextId);
+            if (consumerTemplate) {
+                camelContextDef.setAttribute("hasConsumerTemplate", true);
             }
         }
 
