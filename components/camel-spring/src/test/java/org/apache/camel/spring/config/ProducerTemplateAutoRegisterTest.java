@@ -39,7 +39,7 @@ public class ProducerTemplateAutoRegisterTest extends SpringRunWithTestSupport {
     public void testHasTemplate() {
         assertNotNull("Should have injected a producer template", template);
 
-        ProducerTemplate lookup = context.getRegistry().lookupByNameAndType("template", ProducerTemplate.class);
+        ProducerTemplate lookup = context.getRegistry().lookupByNameAndType("camel.default.producerTemplate", ProducerTemplate.class);
         assertNotNull("Should lookup producer template", lookup);
     }
 }

@@ -258,26 +258,13 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                 {
                     if (pvs.contains("beans")) {
                         List<AbstractBeanDefinition> beanDefs = (List) pvs.get("beans");
-                        boolean hasProducerTemplate = false;
-                        boolean hasConsumerTemplate = false;
                         for (AbstractBeanDefinition beanDef : beanDefs) {
                             Class<?> beanClass = beanDef.getBeanClass();
-                            hasProducerTemplate |= beanClass == CamelProducerTemplateFactoryBean.class;
-                            hasConsumerTemplate |= beanClass == CamelConsumerTemplateFactoryBean.class;
-
                             if (beanClass == CamelProducerTemplateFactoryBean.class
                                     || beanClass == CamelConsumerTemplateFactoryBean.class) {
                                 String id = (String) beanDef.getPropertyValues().get("id");
                                 parserContext.registerBeanComponent(new BeanComponentDefinition(beanDef, id));
                             }
-                        }
-
-                        if (hasProducerTemplate) {
-                            bd.setAttribute("hasProducerTemplate", true);
-                        }
-
-                        if (hasConsumerTemplate) {
-                            bd.setAttribute("hasConsumerTemplate", true);
                         }
                     }
                 }

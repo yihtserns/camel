@@ -42,6 +42,8 @@ public class ConsumerProducerTemplateAutoRegisterer implements BeanDefinitionReg
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         List<AbstractBeanDefinition> camelContextDefs = new ArrayList<AbstractBeanDefinition>();
+        boolean hasProducerTemplate = false;
+        boolean hasConsumerTemplate = false;
         for (String beanName : registry.getBeanDefinitionNames()) {
             BeanDefinition bd = registry.getBeanDefinition(beanName);
             if (!(bd instanceof AbstractBeanDefinition)) {
@@ -52,24 +54,25 @@ public class ConsumerProducerTemplateAutoRegisterer implements BeanDefinitionReg
                 continue;
             }
             Class<?> beanClass = abd.getBeanClass();
-            if (!CamelContextFactoryBean.class.isAssignableFrom(beanClass)) {
-                continue;
+            hasProducerTemplate |= CamelProducerTemplateFactoryBean.class.isAssignableFrom(beanClass);
+            hasConsumerTemplate |= CamelConsumerTemplateFactoryBean.class.isAssignableFrom(beanClass);
+
+            if (CamelContextFactoryBean.class.isAssignableFrom(beanClass)) {
+                camelContextDefs.add(abd);
             }
-            camelContextDefs.add(abd);
         }
 
-        boolean onlyOneCamelContext = camelContextDefs.size() == 1;
-        if (onlyOneCamelContext) {
+        if (camelContextDefs.size() == 1) {
             AbstractBeanDefinition camelContextDef = camelContextDefs.get(0);
             String camelContextId = (String) camelContextDef.getPropertyValues().get("id");
 
-            if (!camelContextDef.hasAttribute("hasProducerTemplate")) {
-                String id = "template";
+            if (!hasProducerTemplate) {
+                String id = "camel.default.producerTemplate";
                 Class<?> beanClass = CamelProducerTemplateFactoryBean.class;
                 tryRegister(beanClass, camelContextId, registry, id);
             }
-            if (!camelContextDef.hasAttribute("hasConsumerTemplate")) {
-                String id = "consumerTemplate";
+            if (!hasConsumerTemplate) {
+                String id = "camel.default.consumerTemplate";
                 Class<?> beanClass = CamelConsumerTemplateFactoryBean.class;
                 tryRegister(beanClass, camelContextId, registry, id);
             }
@@ -77,13 +80,10 @@ public class ConsumerProducerTemplateAutoRegisterer implements BeanDefinitionReg
     }
 
     private void tryRegister(Class<?> beanClass, String camelContextId, BeanDefinitionRegistry registry, String id) throws BeanDefinitionStoreException {
-        if (registry.isBeanNameInUse(id)) {
-            return;
-        }
-        BeanDefinition defaultProducerTemplateBd = BeanDefinitionBuilder.genericBeanDefinition(beanClass)
+        BeanDefinition defaultBeanDef = BeanDefinitionBuilder.genericBeanDefinition(beanClass)
                 .addPropertyReference("camelContext", camelContextId)
                 .getBeanDefinition();
-        registry.registerBeanDefinition(id, defaultProducerTemplateBd);
+        registry.registerBeanDefinition(id, defaultBeanDef);
         if (log.isDebugEnabled()) {
             log.debug("Registered default: {} with id: {} on camel context: {}",
                     new Object[]{beanClass, id, camelContextId});
