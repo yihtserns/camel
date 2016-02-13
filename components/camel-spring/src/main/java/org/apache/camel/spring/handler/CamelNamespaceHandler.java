@@ -19,6 +19,9 @@ package org.apache.camel.spring.handler;
 import com.github.yihtserns.jaxbean.unmarshaller.api.BeanHandler;
 import com.github.yihtserns.jaxbean.unmarshaller.api.SpringBeanHandler;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,6 +51,7 @@ import org.apache.camel.util.ObjectHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.MutablePropertyValues;
+import org.springframework.beans.PropertyValue;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.beans.factory.parsing.BeanComponentDefinition;
@@ -242,66 +246,17 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                 bd = (AbstractBeanDefinition) Unmarshaller.INSTANCE.unmarshal(
                         element,
                         new CamelContextBeanHandler(element, customBeanClass, contextId, implicitId, parserContext));
-                MutablePropertyValues pvs = bd.getPropertyValues();
-                {
-                    if (pvs.contains("endpoints")) {
-                        List<BeanDefinition> endpointBeanDefs = (List) pvs.get("endpoints");
-                        for (BeanDefinition endpointBeanDef : endpointBeanDefs) {
-                            String id = (String) endpointBeanDef.getPropertyValues().get("id");
-                            if (StringUtils.isEmpty(id)) {
-                                continue;
-                            }
-                            parserContext.registerBeanComponent(new BeanComponentDefinition(endpointBeanDef, id));
-                        }
-                    }
-                }
-                {
-                    if (pvs.contains("beans")) {
-                        List<AbstractBeanDefinition> beanDefs = (List) pvs.get("beans");
-                        for (AbstractBeanDefinition beanDef : beanDefs) {
-                            Class<?> beanClass = beanDef.getBeanClass();
-                            if (beanClass == CamelProducerTemplateFactoryBean.class
-                                    || beanClass == CamelConsumerTemplateFactoryBean.class) {
-                                String id = (String) beanDef.getPropertyValues().get("id");
-                                parserContext.registerBeanComponent(new BeanComponentDefinition(beanDef, id));
-                            }
-                        }
-                    }
-                }
-                {
-                    if (pvs.contains("redeliveryPolicies")) {
-                        List<AbstractBeanDefinition> redeliveryPolicyDefs = (List) pvs.get("redeliveryPolicies");
-                        for (AbstractBeanDefinition redeliveryPolicyDef : redeliveryPolicyDefs) {
-                            String id = (String) redeliveryPolicyDef.getPropertyValues().get("id");
-                            if (StringUtils.isEmpty(id)) {
-                                continue;
-                            }
-                            parserContext.registerBeanComponent(new BeanComponentDefinition(redeliveryPolicyDef, id));
-                        }
-                    }
-                }
-                {
-                    if (pvs.contains("threadPools")) {
-                        List<AbstractBeanDefinition> threadPoolDefs = (List) pvs.get("threadPools");
-                        for (AbstractBeanDefinition threadPoolDef : threadPoolDefs) {
-                            String id = (String) threadPoolDef.getPropertyValues().get("id");
-                            if (StringUtils.isEmpty(id)) {
-                                continue;
-                            }
-                            parserContext.registerBeanComponent(new BeanComponentDefinition(threadPoolDef, id));
-                        }
-                    }
-                }
-                {
-                    if (pvs.contains("dependsOn")) {
-                        String dependsOn = (String) pvs.get("dependsOn");
-                        bd.setDependsOn(StringUtils.tokenizeToStringArray(dependsOn, MULTI_VALUE_ATTRIBUTE_DELIMITERS));
-                    }
-                }
-                pvs.removePropertyValue("endpoints");
-                pvs.removePropertyValue("beans");
-                pvs.removePropertyValue("redeliveryPolicies");
-                pvs.removePropertyValue("threadPools");
+                bd.setDependsOn(StringUtils.tokenizeToStringArray(
+                        (String) bd.getPropertyValues().get("dependsOn"),
+                        MULTI_VALUE_ATTRIBUTE_DELIMITERS));
+
+                final List<Class> validBeanClasses = Arrays.<Class>asList(
+                        CamelProducerTemplateFactoryBean.class,
+                        CamelConsumerTemplateFactoryBean.class);
+                registerAllBeanDefs(filter(removeBeanDefsPropertyFrom(bd, "beans"), validBeanClasses), parserContext);
+                registerAllBeanDefs(removeBeanDefsPropertyFrom(bd, "endpoints"), parserContext);
+                registerAllBeanDefs(removeBeanDefsPropertyFrom(bd, "redeliveryPolicies"), parserContext);
+                registerAllBeanDefs(removeBeanDefsPropertyFrom(bd, "threadPools"), parserContext);
             } catch (Exception ex) {
                 String msg = String.format("Unable to unmarshal <%s/>", element.getLocalName());
                 parserContext.getReaderContext().fatal(msg, element, ex);
@@ -352,6 +307,35 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
             bd.getPropertyValues().addPropertyValue("beanPostProcessor", new RuntimeBeanReference(camelPostProcessorId));
 
             return bd;
+        }
+
+        private void registerAllBeanDefs(List<AbstractBeanDefinition> beanDefs, ParserContext parserContext) {
+            for (AbstractBeanDefinition beanDef : beanDefs) {
+                String id = (String) beanDef.getPropertyValues().get("id");
+                parserContext.registerBeanComponent(new BeanComponentDefinition(beanDef, id));
+            }
+        }
+
+        private List<AbstractBeanDefinition> removeBeanDefsPropertyFrom(BeanDefinition bd, String propertyName) {
+            MutablePropertyValues pvs = bd.getPropertyValues();
+            PropertyValue propertyValue = pvs.getPropertyValue(propertyName);
+            if (propertyValue == null) {
+                return Collections.emptyList();
+            }
+
+            pvs.removePropertyValue(propertyName);
+            return (List) propertyValue.getValue();
+        }
+
+        private List<AbstractBeanDefinition> filter(List<AbstractBeanDefinition> beanDefs, List<Class> validBeanClasses) {
+            List<AbstractBeanDefinition> filteredBeanDefs = new ArrayList<AbstractBeanDefinition>();
+            for (AbstractBeanDefinition beanDef : beanDefs) {
+                if (validBeanClasses.contains(beanDef.getBeanClass())) {
+                    filteredBeanDefs.add(beanDef);
+                }
+            }
+
+            return filteredBeanDefs;
         }
 
         private class CamelContextBeanHandler implements BeanHandler<BeanDefinitionBuilder> {
