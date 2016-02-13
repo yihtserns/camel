@@ -246,9 +246,6 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                 bd = (AbstractBeanDefinition) Unmarshaller.INSTANCE.unmarshal(
                         element,
                         new CamelContextBeanHandler(element, customBeanClass, contextId, implicitId, parserContext));
-                bd.setDependsOn(StringUtils.tokenizeToStringArray(
-                        (String) bd.getPropertyValues().get("dependsOn"),
-                        MULTI_VALUE_ATTRIBUTE_DELIMITERS));
 
                 final List<Class> validBeanClasses = Arrays.<Class>asList(
                         CamelProducerTemplateFactoryBean.class,
@@ -385,7 +382,13 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                         propertyValue = changed;
                     }
                 }
-                SpringBeanHandler.INSTANCE.setBeanProperty(bean, propertyName, propertyValue);
+
+                if (propertyName.equals("dependsOn")) {
+                    String[] beanNames = StringUtils.tokenizeToStringArray((String) propertyValue, MULTI_VALUE_ATTRIBUTE_DELIMITERS);
+                    bean.getRawBeanDefinition().setDependsOn(beanNames);
+                } else {
+                    SpringBeanHandler.INSTANCE.setBeanProperty(bean, propertyName, propertyValue);
+                }
             }
 
             @Override
