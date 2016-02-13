@@ -74,6 +74,10 @@ public class CamelServiceExporter extends RemoteExporter implements Initializing
         this.serviceRef = serviceRef;
     }
 
+    public void setId(String id) {
+        // So don't need special handling when parsing and setting XML value
+    }
+
     public ApplicationContext getApplicationContext() {
         return applicationContext;
     }

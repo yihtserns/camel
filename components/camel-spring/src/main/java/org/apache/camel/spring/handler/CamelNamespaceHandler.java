@@ -35,6 +35,8 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import org.apache.camel.builder.xml.Namespaces;
+import org.apache.camel.core.xml.CamelProxyFactoryDefinition;
+import org.apache.camel.core.xml.CamelServiceExporterDefinition;
 import org.apache.camel.impl.DefaultCamelContextNameStrategy;
 import org.apache.camel.model.FromDefinition;
 import org.apache.camel.model.SendDefinition;
@@ -117,7 +119,11 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
             LOG.info("OSGi environment detected.");
         }
         LOG.debug("Using {} as CamelContextBeanDefinitionParser", cl.getCanonicalName());
-        registerBeanDefinitionParser("camelContext", new CamelContextBeanDefinitionParser(cl));
+        CamelContextBeanDefinitionParser camelContextParser = new CamelContextBeanDefinitionParser(cl);
+        camelContextParser.beanClass2ReplacementClass.put(CamelProxyFactoryDefinition.class, CamelProxyFactoryBean.class);
+        camelContextParser.beanClass2ReplacementClass.put(CamelServiceExporterDefinition.class, CamelServiceExporter.class);
+
+        registerBeanDefinitionParser("camelContext", camelContextParser);
     }
 
     private void addBeanDefinitionParser(String elementName, Class<?> type, boolean register, boolean assignId) {
@@ -213,6 +219,7 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
     private class CamelContextBeanDefinitionParser extends AbstractBeanDefinitionParser {
 
         private UnmarshallerParser dynamicEndpointParser = UnmarshallerParser.dynamicEndpointParser();
+        private Map<Class, Class> beanClass2ReplacementClass = new HashMap<Class, Class>();
         private Class<? extends CamelContextFactoryBean> customBeanClass;
 
         public CamelContextBeanDefinitionParser(Class<? extends CamelContextFactoryBean> customBeanClass) {
@@ -249,7 +256,9 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
 
                 final List<Class> validBeanClasses = Arrays.<Class>asList(
                         CamelProducerTemplateFactoryBean.class,
-                        CamelConsumerTemplateFactoryBean.class);
+                        CamelConsumerTemplateFactoryBean.class,
+                        CamelServiceExporter.class,
+                        CamelProxyFactoryBean.class);
                 registerAllBeanDefs(filter(removeBeanDefsPropertyFrom(bd, "beans"), validBeanClasses), parserContext);
                 registerAllBeanDefs(removeBeanDefsPropertyFrom(bd, "endpoints"), parserContext);
                 registerAllBeanDefs(removeBeanDefsPropertyFrom(bd, "redeliveryPolicies"), parserContext);
@@ -276,18 +285,16 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                         || localName.equals("redeliveryPolicyProfile")
                         || localName.equals("jmxAgent")
                         || localName.equals("streamCaching")
-                        || localName.equals("propertyPlaceholder")) {
+                        || localName.equals("propertyPlaceholder")
+                        || localName.equals("proxy")
+                        || localName.equals("export")) {
                     continue;
                 }
                 AbstractBeanDefinitionParser parser = parserMap.get(localName);
                 if (parser == null) {
                     continue;
                 }
-                BeanDefinition definition = parser.parse(childElement, parserContext);
-                if (localName.equals("proxy") || localName.equals("export")) {
-                    // set the camel context
-                    definition.getPropertyValues().addPropertyValue("camelContext", new RuntimeBeanReference(contextId));
-                }
+                parser.parse(childElement, parserContext);
             }
 
             // inject bean post processor so we can support @Produce etc.
@@ -359,6 +366,9 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
 
             @Override
             public BeanDefinitionBuilder createBean(Class<?> beanClass, Element element) {
+                if (beanClass2ReplacementClass.containsKey(beanClass)) {
+                    beanClass = beanClass2ReplacementClass.get(beanClass);
+                }
                 if (element == camelContextElement) {
                     BeanDefinitionBuilder bean = SpringBeanHandler.INSTANCE.createBean(camelContextClass, element);
                     bean.addPropertyValue("id", camelContextId);
