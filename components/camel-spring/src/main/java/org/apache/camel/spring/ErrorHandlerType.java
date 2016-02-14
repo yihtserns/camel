@@ -18,6 +18,7 @@ package org.apache.camel.spring;
 
 import javax.xml.bind.annotation.XmlEnum;
 import javax.xml.bind.annotation.XmlType;
+import org.apache.camel.ErrorHandlerFactory;
 
 import org.apache.camel.builder.DeadLetterChannelBuilder;
 import org.apache.camel.builder.DefaultErrorHandlerBuilder;
@@ -41,7 +42,7 @@ public enum ErrorHandlerType {
      *
      * @return the class which represents the selected type.
      */
-    public Class<?> getTypeAsClass() {
+    public Class<? extends ErrorHandlerFactory> getTypeAsClass() {
         switch (this) {
         case DefaultErrorHandler:
             return DefaultErrorHandlerBuilder.class;
