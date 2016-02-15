@@ -16,6 +16,7 @@
  */
 package org.apache.camel.util.spring;
 
+import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 import javax.xml.bind.annotation.XmlType;
@@ -33,15 +34,20 @@ import org.springframework.context.ApplicationContextAware;
 @XmlType(propOrder = {})
 public class SSLContextParametersFactoryBean extends AbstractSSLContextParametersFactoryBean
         implements FactoryBean<SSLContextParameters>, ApplicationContextAware {
-    
+
+    @XmlElement
     private KeyManagersParametersFactoryBean keyManagers;
     
+    @XmlElement
     private TrustManagersParametersFactoryBean trustManagers;
         
-    private SecureRandomParametersFactoryBean secureRandom;
+    @XmlElement
+    private SecureRandomParametersFactory secureRandom;
     
+    @XmlElement
     private SSLContextClientParametersFactoryBean clientParameters;
     
+    @XmlElement
     private SSLContextServerParametersFactoryBean serverParameters;
     
     @XmlTransient
@@ -66,11 +72,11 @@ public class SSLContextParametersFactoryBean extends AbstractSSLContextParameter
     }
 
     @Override
-    public SecureRandomParametersFactoryBean getSecureRandom() {
+    public SecureRandomParametersFactory getSecureRandom() {
         return secureRandom;
     }
 
-    public void setSecureRandom(SecureRandomParametersFactoryBean secureRandom) {
+    public void setSecureRandom(SecureRandomParametersFactory secureRandom) {
         this.secureRandom = secureRandom;
     }
 

@@ -17,22 +17,24 @@
 package org.apache.camel.core.xml.util.jsse;
 
 import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlTransient;
 
 import org.apache.camel.util.jsse.BaseSSLContextParameters;
-import org.apache.camel.util.jsse.CipherSuitesParameters;
-import org.apache.camel.util.jsse.FilterParameters;
-import org.apache.camel.util.jsse.SecureSocketProtocolsParameters;
 
 @XmlTransient
 public abstract class AbstractBaseSSLContextParametersFactoryBean<T extends BaseSSLContextParameters> extends AbstractJsseUtilFactoryBean<T> {
-    
+
+    @XmlElement
     private CipherSuitesParametersDefinition cipherSuites;
     
+    @XmlElement
     private FilterParametersDefinition cipherSuitesFilter;
     
+    @XmlElement
     private SecureSocketProtocolsParametersDefinition secureSocketProtocols;
     
+    @XmlElement
     private FilterParametersDefinition secureSocketProtocolsFilter;
     
     @XmlAttribute
@@ -61,23 +63,19 @@ public abstract class AbstractBaseSSLContextParametersFactoryBean<T extends Base
         newInstance.setCamelContext(getCamelContext());
 
         if (cipherSuites != null) {
-            CipherSuitesParameters cipherSuitesInstance = new CipherSuitesParameters();
-            cipherSuitesInstance.getCipherSuite().addAll(cipherSuites.getCipherSuite());
-            newInstance.setCipherSuites(cipherSuitesInstance);
+            newInstance.setCipherSuites(cipherSuites.create());
         }
         
         if (cipherSuitesFilter != null) {
-            newInstance.setCipherSuitesFilter(createFilterParameters(cipherSuitesFilter));
+            newInstance.setCipherSuitesFilter(cipherSuitesFilter.create(getCamelContext()));
         }
         
         if (secureSocketProtocols != null) {
-            SecureSocketProtocolsParameters secureSocketProtocolsInstance = new SecureSocketProtocolsParameters();
-            secureSocketProtocolsInstance.getSecureSocketProtocol().addAll(secureSocketProtocols.getSecureSocketProtocol());
-            newInstance.setSecureSocketProtocols(secureSocketProtocolsInstance);
+            newInstance.setSecureSocketProtocols(secureSocketProtocols.create());
         }
         
         if (secureSocketProtocolsFilter != null) {
-            newInstance.setSecureSocketProtocolsFilter(createFilterParameters(secureSocketProtocolsFilter));
+            newInstance.setSecureSocketProtocolsFilter(secureSocketProtocolsFilter.create(getCamelContext()));
         }
         
         if (sessionTimeout != null) {
@@ -85,15 +83,6 @@ public abstract class AbstractBaseSSLContextParametersFactoryBean<T extends Base
         }
 
         return newInstance;
-    }
-    
-    private FilterParameters createFilterParameters(FilterParametersDefinition definition) {
-        FilterParameters filter = new FilterParameters();
-        filter.getInclude().addAll(definition.getInclude());
-        filter.getExclude().addAll(definition.getExclude());
-        filter.setCamelContext(getCamelContext());
-        
-        return filter;
     }
 
     public CipherSuitesParametersDefinition getCipherSuites() {

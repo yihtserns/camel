@@ -22,15 +22,12 @@ import javax.xml.bind.annotation.XmlType;
 import org.apache.camel.CamelContext;
 import org.apache.camel.core.xml.util.jsse.AbstractSSLContextClientParametersFactoryBean;
 import org.apache.camel.spring.util.CamelContextResolverHelper;
-import org.apache.camel.util.jsse.SSLContextClientParameters;
-
-import org.springframework.beans.factory.FactoryBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
 @XmlType(propOrder = {})
 public class SSLContextClientParametersFactoryBean extends AbstractSSLContextClientParametersFactoryBean
-        implements FactoryBean<SSLContextClientParameters>, ApplicationContextAware {
+        implements ApplicationContextAware {
     
     @XmlTransient
     private ApplicationContext applicationContext;

@@ -16,11 +16,12 @@
  */
 package org.apache.camel.core.xml.util.jsse;
 
-import java.util.ArrayList;
 import java.util.List;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlType;
+import org.apache.camel.util.jsse.SecureSocketProtocolsParameters;
 
 /**
  * Represents a list of TLS/SSL cipher suite names.
@@ -29,17 +30,17 @@ import javax.xml.bind.annotation.XmlType;
 @XmlType(name = "secureSocketProtocolsParameters", propOrder = {"secureSocketProtocol"})
 public class SecureSocketProtocolsParametersDefinition {
 
+    @XmlElement
     private List<String> secureSocketProtocol;
 
-    /**
-     * Returns a live reference to the list of secure socket protocol names.
-     *
-     * @return a reference to the list, never {@code null}
-     */
-    public List<String> getSecureSocketProtocol() {
-        if (this.secureSocketProtocol == null) {
-            this.secureSocketProtocol = new ArrayList<String>();
-        }
-        return this.secureSocketProtocol;
+    public SecureSocketProtocolsParameters create() {
+        SecureSocketProtocolsParameters instance = new SecureSocketProtocolsParameters();
+        instance.getSecureSocketProtocol().addAll(secureSocketProtocol);
+
+        return instance;
+    }
+
+    public void setSecureSocketProtocol(List<String> secureSocketProtocol) {
+        this.secureSocketProtocol = secureSocketProtocol;
     }
 }

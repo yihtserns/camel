@@ -17,21 +17,18 @@
 package org.apache.camel.util.spring;
 
 import javax.xml.bind.annotation.XmlTransient;
-import javax.xml.bind.annotation.XmlType;
 
 import org.apache.camel.CamelContext;
-import org.apache.camel.core.xml.util.jsse.AbstractSSLContextServerParametersFactoryBean;
+import org.apache.camel.core.xml.util.jsse.AbstractSecureRandomParametersFactoryBean;
 import org.apache.camel.spring.util.CamelContextResolverHelper;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
-@XmlType(propOrder = {})
-public class SSLContextServerParametersFactoryBean extends AbstractSSLContextServerParametersFactoryBean
-        implements ApplicationContextAware {
-    
+public class SecureRandomParametersFactory extends AbstractSecureRandomParametersFactoryBean implements ApplicationContextAware {
+
     @XmlTransient
     private ApplicationContext applicationContext;
-    
+
     @Override
     protected CamelContext getCamelContextWithId(String camelContextId) {
         return CamelContextResolverHelper.getCamelContextWithId(applicationContext, camelContextId);

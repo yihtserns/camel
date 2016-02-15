@@ -16,12 +16,14 @@
  */
 package org.apache.camel.core.xml.util.jsse;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlType;
+import org.apache.camel.CamelContext;
+import org.apache.camel.util.jsse.FilterParameters;
 
 /**
  * Represents a set of regular expression based filter patterns for
@@ -31,32 +33,25 @@ import javax.xml.bind.annotation.XmlType;
 @XmlType(name = "filterParameters", propOrder = {"include", "exclude"})
 public class FilterParametersDefinition {
 
+    @XmlElement
     protected List<String> include;
+    @XmlElement
     protected List<String> exclude;
 
-    /**
-     * Returns a live copy of the list of patterns to include.
-     * The list of excludes takes precedence over the include patterns.
-     *
-     * @return the list of patterns to include
-     */
-    public List<String> getInclude() {
-        if (this.include == null) {
-            this.include = new ArrayList<String>();
-        }
-        return this.include;
+    public FilterParameters create(CamelContext camelContext) {
+        FilterParameters instance = new FilterParameters();
+        instance.getInclude().addAll(include);
+        instance.getExclude().addAll(exclude);
+        instance.setCamelContext(camelContext);
+
+        return instance;
     }
 
-    /**
-     * Returns a live copy of the list of patterns to exclude.
-     * This list takes precedence over the include patterns.
-     *
-     * @return the list of patterns to exclude
-     */
-    public List<String> getExclude() {
-        if (exclude == null) {
-            exclude = new ArrayList<String>();
-        }
-        return this.exclude;
+    public void setInclude(List<String> include) {
+        this.include = include;
+    }
+
+    public void setExclude(List<String> exclude) {
+        this.exclude = exclude;
     }
 }

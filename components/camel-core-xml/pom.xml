@@ -25,6 +25,7 @@
   </parent>
 
   <artifactId>camel-core-xml</artifactId>
+  <version>2.16.0.placeholder-SNAPSHOT</version>
   <name>Camel :: Core XML</name>
   <description>Camel Core XML support</description>
 

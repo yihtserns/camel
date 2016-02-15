@@ -16,27 +16,29 @@
  */
 package org.apache.camel.core.xml.util.jsse;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlType;
+import org.apache.camel.util.jsse.CipherSuitesParameters;
 
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "cipherSuitesParameters", propOrder = {"cipherSuite"})
 public class CipherSuitesParametersDefinition {
 
-    private List<String> cipherSuite;
+    @XmlElement
+    private List<String> cipherSuite = Collections.emptyList();
 
-    /**
-     * Returns a live reference to the list of cipher suite names.
-     *
-     * @return a reference to the list, never {@code null}
-     */
-    public List<String> getCipherSuite() {
-        if (this.cipherSuite == null) {
-            this.cipherSuite = new ArrayList<String>();
-        }
-        return this.cipherSuite;
+    public CipherSuitesParameters create() {
+        CipherSuitesParameters instance = new CipherSuitesParameters();
+        instance.getCipherSuite().addAll(cipherSuite);
+
+        return instance;
+    }
+
+    public void setCipherSuite(List<String> cipherSuite) {
+        this.cipherSuite = cipherSuite;
     }
 }
