@@ -19,8 +19,6 @@ package org.apache.camel.spring.handler;
 import com.github.yihtserns.jaxbean.unmarshaller.api.BeanHandler;
 import com.github.yihtserns.jaxbean.unmarshaller.api.SpringBeanHandler;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -31,8 +29,6 @@ import javax.xml.namespace.QName;
 import org.apache.camel.CamelContextAware;
 
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
 import org.apache.camel.builder.xml.Namespaces;
 import org.apache.camel.core.xml.CamelProxyFactoryDefinition;
@@ -43,10 +39,8 @@ import org.apache.camel.model.SendDefinition;
 import org.apache.camel.spi.CamelContextNameStrategy;
 import org.apache.camel.spi.NamespaceAware;
 import org.apache.camel.spring.CamelBeanPostProcessor;
-import org.apache.camel.spring.CamelConsumerTemplateFactoryBean;
 import org.apache.camel.spring.CamelContextFactoryBean;
 import org.apache.camel.spring.CamelEndpointFactoryBean;
-import org.apache.camel.spring.CamelProducerTemplateFactoryBean;
 import org.apache.camel.spring.remoting.CamelProxyFactoryBean;
 import org.apache.camel.spring.remoting.CamelServiceExporter;
 import org.apache.camel.util.ObjectHelper;
@@ -73,7 +67,6 @@ import org.w3c.dom.Attr;
 public class CamelNamespaceHandler extends NamespaceHandlerSupport {
 
     private static final Logger LOG = LoggerFactory.getLogger(CamelNamespaceHandler.class);
-    private Map<String, AbstractBeanDefinitionParser> parserMap = new HashMap<String, AbstractBeanDefinitionParser>();
     private UnmarshallerParser genericUnmarshallerParser = UnmarshallerParser.create();
 
     public void init() {
@@ -87,14 +80,9 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
         registerBeanDefinitionParser("redeliveryPolicyProfile", genericUnmarshallerParser);
         registerBeanDefinitionParser("keyStoreParameters", genericUnmarshallerParser);
         registerBeanDefinitionParser("secureRandomParameters", genericUnmarshallerParser);
-
-        addBeanDefinitionParser("proxy", CamelProxyFactoryBean.class, true, false);
-        addBeanDefinitionParser("export", CamelServiceExporter.class, true, false);
-
-        // errorhandler could be the sub element of camelContext or defined outside camelContext
-        BeanDefinitionParser errorHandlerParser = new ErrorHandlerDefinitionParser();
-        registerBeanDefinitionParser("errorHandler", errorHandlerParser);
-        parserMap.put("errorHandler", errorHandlerParser);
+        registerBeanDefinitionParser("errorHandler", genericUnmarshallerParser);
+        registerBeanDefinitionParser("proxy", new BeanDefinitionParser(CamelProxyFactoryBean.class, false));
+        registerBeanDefinitionParser("export", new BeanDefinitionParser(CamelServiceExporter.class, false));
 
         // camel context
         boolean osgi = false;
@@ -124,14 +112,6 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
         camelContextParser.beanClass2ReplacementClass.put(CamelServiceExporterDefinition.class, CamelServiceExporter.class);
 
         registerBeanDefinitionParser("camelContext", camelContextParser);
-    }
-
-    private void addBeanDefinitionParser(String elementName, Class<?> type, boolean register, boolean assignId) {
-        BeanDefinitionParser parser = new BeanDefinitionParser(type, assignId);
-        if (register) {
-            registerBeanDefinitionParser(elementName, parser);
-        }
-        parserMap.put(elementName, parser);
     }
 
     private static class UnmarshallerParser extends AbstractBeanDefinitionParser {
@@ -254,12 +234,7 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                         element,
                         new CamelContextBeanHandler(element, customBeanClass, contextId, implicitId, parserContext));
 
-                final List<Class> validBeanClasses = Arrays.<Class>asList(
-                        CamelProducerTemplateFactoryBean.class,
-                        CamelConsumerTemplateFactoryBean.class,
-                        CamelServiceExporter.class,
-                        CamelProxyFactoryBean.class);
-                registerAllBeanDefs(filter(removeBeanDefsPropertyFrom(bd, "beans"), validBeanClasses), parserContext);
+                registerAllBeanDefs(removeBeanDefsPropertyFrom(bd, "beans"), parserContext);
                 registerAllBeanDefs(removeBeanDefsPropertyFrom(bd, "endpoints"), parserContext);
                 registerAllBeanDefs(removeBeanDefsPropertyFrom(bd, "redeliveryPolicies"), parserContext);
                 registerAllBeanDefs(removeBeanDefsPropertyFrom(bd, "threadPools"), parserContext);
@@ -267,34 +242,6 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
                 String msg = String.format("Unable to unmarshal <%s/>", element.getLocalName());
                 parserContext.getReaderContext().fatal(msg, element, ex);
                 return null;
-            }
-
-            NodeList list = element.getChildNodes();
-            int size = list.getLength();
-            for (int i = 0; i < size; i++) {
-                Node child = list.item(i);
-                if (!(child instanceof Element)) {
-                    continue;
-                }
-                Element childElement = (Element) child;
-                String localName = child.getLocalName();
-                if (localName.equals("endpoint")
-                        || localName.equals("template")
-                        || localName.equals("consumerTemplate")
-                        || localName.equals("threadPool")
-                        || localName.equals("redeliveryPolicyProfile")
-                        || localName.equals("jmxAgent")
-                        || localName.equals("streamCaching")
-                        || localName.equals("propertyPlaceholder")
-                        || localName.equals("proxy")
-                        || localName.equals("export")) {
-                    continue;
-                }
-                AbstractBeanDefinitionParser parser = parserMap.get(localName);
-                if (parser == null) {
-                    continue;
-                }
-                parser.parse(childElement, parserContext);
             }
 
             // inject bean post processor so we can support @Produce etc.
@@ -329,17 +276,6 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
 
             pvs.removePropertyValue(propertyName);
             return (List) propertyValue.getValue();
-        }
-
-        private List<AbstractBeanDefinition> filter(List<AbstractBeanDefinition> beanDefs, List<Class> validBeanClasses) {
-            List<AbstractBeanDefinition> filteredBeanDefs = new ArrayList<AbstractBeanDefinition>();
-            for (AbstractBeanDefinition beanDef : beanDefs) {
-                if (validBeanClasses.contains(beanDef.getBeanClass())) {
-                    filteredBeanDefs.add(beanDef);
-                }
-            }
-
-            return filteredBeanDefs;
         }
 
         private class CamelContextBeanHandler implements BeanHandler<BeanDefinitionBuilder> {

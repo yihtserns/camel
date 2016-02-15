@@ -19,15 +19,8 @@ package org.apache.camel.spring;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlTransient;
-
-import org.apache.camel.CamelContext;
-import org.apache.camel.core.xml.AbstractCamelRedeliveryPolicyFactoryBean;
 import org.apache.camel.processor.RedeliveryPolicy;
-import org.apache.camel.spring.util.CamelContextResolverHelper;
 import org.springframework.beans.factory.FactoryBean;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
 
 /**
  * A {@link org.springframework.beans.factory.FactoryBean} which instantiates {@link org.apache.camel.processor.RedeliveryPolicy} objects
@@ -36,17 +29,5 @@ import org.springframework.context.ApplicationContextAware;
  */
 @XmlRootElement(name = "redeliveryPolicyProfile")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class CamelRedeliveryPolicyFactoryBean extends AbstractCamelRedeliveryPolicyFactoryBean implements FactoryBean<RedeliveryPolicy>, ApplicationContextAware {
-
-    @XmlTransient
-    private ApplicationContext applicationContext;
-
-    @Override
-    protected CamelContext getCamelContextWithId(String camelContextId) {
-        return CamelContextResolverHelper.getCamelContextWithId(applicationContext, camelContextId);
-    }
-
-    public void setApplicationContext(ApplicationContext applicationContext) {
-        this.applicationContext = applicationContext;
-    }
+public class CamelRedeliveryPolicyFactoryBean extends CamelRedeliveryPolicyFactory implements FactoryBean<RedeliveryPolicy> {
 }

@@ -16,30 +16,5 @@
  */
 package org.apache.camel.osgi;
 
-import java.util.HashSet;
-import java.util.Set;
-
 public class CamelNamespaceHandler extends org.apache.camel.spring.handler.CamelNamespaceHandler {
-
-    public void init() {
-        super.init();
-        registerParser("camelContext", new CamelContextBeanDefinitionParser(CamelContextFactoryBean.class));
-    }
-
-    // It just add the package of the class for initiate the JAXB context
-    protected Set<Class<?>> getJaxbPackages() {
-        Set<Class<?>> classes = new HashSet<Class<?>>();
-        classes.add(CamelContextFactoryBean.class);
-        classes.add(org.apache.camel.spring.CamelContextFactoryBean.class);
-        classes.add(org.apache.camel.ExchangePattern.class);
-        classes.add(org.apache.camel.model.RouteDefinition.class);
-        classes.add(org.apache.camel.model.config.StreamResequencerConfig.class);     
-        classes.add(org.apache.camel.model.dataformat.DataFormatsDefinition.class);
-        classes.add(org.apache.camel.model.language.ExpressionDefinition.class);
-        classes.add(org.apache.camel.model.loadbalancer.RoundRobinLoadBalancerDefinition.class);        
-        classes.add(org.apache.camel.model.rest.RestDefinition.class);
-        return classes;
-    }
-
-
 }
