@@ -69,17 +69,19 @@ public class ConsumerProducerTemplateAutoRegisterer implements BeanDefinitionReg
             if (!hasProducerTemplate) {
                 String id = "camel.default.producerTemplate";
                 Class<?> beanClass = CamelProducerTemplateFactoryBean.class;
-                tryRegister(beanClass, camelContextId, registry, id);
+                registerBeanDefinition(id, beanClass, camelContextId, registry);
             }
             if (!hasConsumerTemplate) {
                 String id = "camel.default.consumerTemplate";
                 Class<?> beanClass = CamelConsumerTemplateFactoryBean.class;
-                tryRegister(beanClass, camelContextId, registry, id);
+                registerBeanDefinition(id, beanClass, camelContextId, registry);
             }
         }
     }
 
-    private void tryRegister(Class<?> beanClass, String camelContextId, BeanDefinitionRegistry registry, String id) throws BeanDefinitionStoreException {
+    private void registerBeanDefinition(
+            String id, Class<?> beanClass, String camelContextId, BeanDefinitionRegistry registry)
+            throws BeanDefinitionStoreException {
         BeanDefinition defaultBeanDef = BeanDefinitionBuilder.genericBeanDefinition(beanClass)
                 .addPropertyReference("camelContext", camelContextId)
                 .getBeanDefinition();
