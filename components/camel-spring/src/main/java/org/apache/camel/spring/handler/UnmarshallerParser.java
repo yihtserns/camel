@@ -43,19 +43,16 @@ class UnmarshallerParser extends AbstractBeanDefinitionParser {
     private Logger log = LoggerFactory.getLogger(getClass());
     Map<Class, Class> beanClass2ReplacementClass = new HashMap<Class, Class>();
     private boolean includeComplexTypes = true;
-    private Class<?> customBeanClass = null;
+    private Class<?> customRootBeanClass = null;
 
     @Override
     protected AbstractBeanDefinition parseInternal(Element element, ParserContext parserContext) {
         try {
-            return (AbstractBeanDefinition) Unmarshaller.INSTANCE.unmarshal(element, new BeanHandler<BeanDefinitionBuilder>() {
+            AbstractBeanDefinition bd = (AbstractBeanDefinition) Unmarshaller.INSTANCE.unmarshal(element, new BeanHandler<BeanDefinitionBuilder>() {
                 private NamespacesCache namespacesCache = new NamespacesCache();
 
                 @Override
                 public BeanDefinitionBuilder createBean(Class<?> beanClass, Element element) {
-                    if (customBeanClass != null) {
-                        beanClass = customBeanClass;
-                    }
                     if (beanClass2ReplacementClass.containsKey(beanClass)) {
                         beanClass = beanClass2ReplacementClass.get(beanClass);
                     }
@@ -102,6 +99,11 @@ class UnmarshallerParser extends AbstractBeanDefinitionParser {
                     return SpringBeanHandler.INSTANCE.postProcess(bean, customAttributes, customElements);
                 }
             });
+
+            if (customRootBeanClass != null) {
+                bd.setBeanClass(customRootBeanClass);
+            }
+            return bd;
         } catch (Exception ex) {
             String msg = String.format("Unable to marshal <%s/>", element.getLocalName());
             parserContext.getReaderContext().fatal(msg, element, ex);
@@ -115,7 +117,7 @@ class UnmarshallerParser extends AbstractBeanDefinitionParser {
 
     public static UnmarshallerParser dynamicEndpointParser() {
         UnmarshallerParser parser = new UnmarshallerParser();
-        parser.customBeanClass = CamelEndpointFactoryBean.class;
+        parser.customRootBeanClass = CamelEndpointFactoryBean.class;
         parser.includeComplexTypes = false;
         return parser;
     }
