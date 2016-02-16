@@ -24,30 +24,26 @@ import org.apache.camel.spring.remoting.CamelProxyFactoryBean;
 import org.apache.camel.spring.remoting.CamelServiceExporter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.xml.NamespaceHandlerSupport;
+import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.beans.factory.config.BeanDefinitionHolder;
+import org.springframework.beans.factory.xml.NamespaceHandler;
+import org.springframework.beans.factory.xml.ParserContext;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 
 /**
  * Camel namespace for the spring XML configuration file.
  */
-public class CamelNamespaceHandler extends NamespaceHandlerSupport {
+public class CamelNamespaceHandler implements NamespaceHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(CamelNamespaceHandler.class);
-    private UnmarshallerParser genericUnmarshallerParser = UnmarshallerParser.create();
+    private UnmarshallerParser genericUnmarshallerParser;
+    private CamelContextBeanDefinitionParser camelContextParser;
 
     public void init() {
-        registerBeanDefinitionParser("restContext", genericUnmarshallerParser);
-        registerBeanDefinitionParser("routeContext", genericUnmarshallerParser);
-        registerBeanDefinitionParser("endpoint", genericUnmarshallerParser);
-        registerBeanDefinitionParser("sslContextParameters", genericUnmarshallerParser);
-        registerBeanDefinitionParser("template", genericUnmarshallerParser);
-        registerBeanDefinitionParser("consumerTemplate", genericUnmarshallerParser);
-        registerBeanDefinitionParser("threadPool", genericUnmarshallerParser);
-        registerBeanDefinitionParser("redeliveryPolicyProfile", genericUnmarshallerParser);
-        registerBeanDefinitionParser("keyStoreParameters", genericUnmarshallerParser);
-        registerBeanDefinitionParser("secureRandomParameters", genericUnmarshallerParser);
-        registerBeanDefinitionParser("errorHandler", genericUnmarshallerParser);
-        registerBeanDefinitionParser("proxy", new BeanDefinitionParser(CamelProxyFactoryBean.class, false));
-        registerBeanDefinitionParser("export", new BeanDefinitionParser(CamelServiceExporter.class, false));
+        genericUnmarshallerParser = UnmarshallerParser.create();
+        genericUnmarshallerParser.beanClass2ReplacementClass.put(CamelProxyFactoryDefinition.class, CamelProxyFactoryBean.class);
+        genericUnmarshallerParser.beanClass2ReplacementClass.put(CamelServiceExporterDefinition.class, CamelServiceExporter.class);
 
         // camel context
         boolean osgi = false;
@@ -72,10 +68,21 @@ public class CamelNamespaceHandler extends NamespaceHandlerSupport {
             LOG.info("OSGi environment detected.");
         }
         LOG.debug("Using {} as CamelContextBeanDefinitionParser", cl.getCanonicalName());
-        CamelContextBeanDefinitionParser camelContextParser = new CamelContextBeanDefinitionParser(cl);
+        camelContextParser = new CamelContextBeanDefinitionParser(cl);
         camelContextParser.beanClass2ReplacementClass.put(CamelProxyFactoryDefinition.class, CamelProxyFactoryBean.class);
         camelContextParser.beanClass2ReplacementClass.put(CamelServiceExporterDefinition.class, CamelServiceExporter.class);
+    }
 
-        registerBeanDefinitionParser("camelContext", camelContextParser);
+    @Override
+    public BeanDefinition parse(Element element, ParserContext parserContext) {
+        if ("camelContext".equals(element.getLocalName())) {
+            return camelContextParser.parse(element, parserContext);
+        }
+        return genericUnmarshallerParser.parse(element, parserContext);
+    }
+
+    @Override
+    public BeanDefinitionHolder decorate(Node source, BeanDefinitionHolder definition, ParserContext parserContext) {
+        throw new UnsupportedOperationException("Not supported.");
     }
 }

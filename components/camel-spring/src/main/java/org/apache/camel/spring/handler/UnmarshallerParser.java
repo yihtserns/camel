@@ -17,7 +17,9 @@ package org.apache.camel.spring.handler;
 
 import com.github.yihtserns.jaxbean.unmarshaller.api.BeanHandler;
 import com.github.yihtserns.jaxbean.unmarshaller.api.SpringBeanHandler;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import javax.xml.bind.annotation.adapters.XmlAdapter;
 import org.apache.camel.builder.xml.Namespaces;
 import org.apache.camel.spi.NamespaceAware;
@@ -39,6 +41,7 @@ import org.w3c.dom.Element;
 class UnmarshallerParser extends AbstractBeanDefinitionParser {
 
     private Logger log = LoggerFactory.getLogger(getClass());
+    Map<Class, Class> beanClass2ReplacementClass = new HashMap<Class, Class>();
     private boolean includeComplexTypes = true;
     private Class<?> customBeanClass = null;
 
@@ -52,6 +55,9 @@ class UnmarshallerParser extends AbstractBeanDefinitionParser {
                 public BeanDefinitionBuilder createBean(Class<?> beanClass, Element element) {
                     if (customBeanClass != null) {
                         beanClass = customBeanClass;
+                    }
+                    if (beanClass2ReplacementClass.containsKey(beanClass)) {
+                        beanClass = beanClass2ReplacementClass.get(beanClass);
                     }
                     return SpringBeanHandler.INSTANCE.createBean(beanClass, element);
                 }
